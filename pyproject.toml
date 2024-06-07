@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "github-overlord"
+version = "0.1.0"
+description = ""
+authors = ["Michael Bianco <mike@mikebian.co>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pygithub = "^2.3.0"
+click = "^8.1.7"
+python-decouple-typed = "^3.11.0"
+funcy-pipe = "^0.11.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
