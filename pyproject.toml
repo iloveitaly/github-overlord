@@ -13,6 +13,16 @@ python-decouple-typed = "^3.11.0"
 funcy-pipe = "^0.11.0"
 structlog = "^24.2.0"
 
+[tool.isort]
+profile = "black"
+# helpful when copy/pasting GPT code
+float_to_top = true
+
+[tool.poetry.group.dev.dependencies]
+isort = "^5.13.2"
+black = "^24.4.2"
+pyright = "^1.1.366"
+pylint = "^3.2.3"
 
 [build-system]
 requires = ["poetry-core"]

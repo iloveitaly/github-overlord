@@ -1,12 +1,14 @@
 import os
 import re
 import time
+
 import click
+import funcy_pipe as fp
 from github import Github
+from github.GithubObject import NotSet
 from github.PullRequest import PullRequest
 
 from github_overlord.utils import log
-
 
 AUTOMATIC_MERGE_MESSAGE = "Automatically merged with GitHub overlord"
 
@@ -20,9 +22,6 @@ def merge_pr(pr, dry_run):
     pr.merge(merge_method="squash")
 
     log.info("merged PR", pr=pr.html_url)
-
-
-from github.GithubObject import NotSet
 
 
 def resolve_async_status(object, key):
@@ -100,9 +99,6 @@ def process_repo(repo, dry_run):
     log.info("merged prs", count=merged_pr_count)
 
 
-import funcy_pipe as fp
-
-
 def main(token, dry_run, repo):
     assert token, "GitHub token is required"
 
@@ -117,6 +113,8 @@ def main(token, dry_run, repo):
     user.get_repos(type="public") | fp.filter(
         lambda repo: repo.owner.login == user.login
     ) | fp.map(fp.rpartial(process_repo, dry_run)) | fp.to_list()
+
+    log.info("dependabot pr check complete")
 
 
 @click.command()
