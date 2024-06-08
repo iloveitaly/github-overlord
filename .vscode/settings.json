@@ -1,0 +1,23 @@
+{
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "editor.tabSize": 4
+  },
+  "[toml]": {
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4
+  },
+  "python.analysis.autoFormatStrings": true,
+
+  // for import autosuggest
+  "python.analysis.indexing": true,
+  "python.analysis.autoImportCompletions": true,
+
+  "flake8.importStrategy": "fromEnvironment",
+
+  "cSpell.enableFiletypes": ["jinja-html"],
+  "black-formatter.importStrategy": "fromEnvironment"
+}
