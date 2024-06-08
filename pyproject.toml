@@ -11,6 +11,7 @@ pygithub = "^2.3.0"
 click = "^8.1.7"
 python-decouple-typed = "^3.11.0"
 funcy-pipe = "^0.11.0"
+structlog = "^24.2.0"
 
 
 [build-system]

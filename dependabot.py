@@ -1,3 +1,5 @@
+# https://raw.githubusercontent.com/dependabot/fetch-metadata/main/src/dependabot/update_metadata.ts
+
 import re
 import yaml
 from typing import Callable, List, Optional, Protocol, TypedDict

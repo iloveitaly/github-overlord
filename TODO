@@ -1,0 +1,1 @@
+github.GithubException.GithubException: 403 {"message": "refusing to allow a Personal Access Token to create or update workflow `.github/workflows/build_and_publish.yml` without `workflow` scope", "documentation_url": "https://docs.github.com/rest/pulls/pulls#merge-a-pull-request", "status": "403"}
