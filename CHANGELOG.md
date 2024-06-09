@@ -1,3 +1,12 @@
+## [0.3.2](https://github.com/iloveitaly/github-overlord/compare/v0.3.1...v0.3.2) (2024-06-09)
+
+
+### Bug Fixes
+
+* adding gitignore, triggering nixpacks build ([6e0137c](https://github.com/iloveitaly/github-overlord/commit/6e0137ccd1528f37ec87b18caf2ef498aad94e7d))
+
+
+
 ## [0.3.1](https://github.com/iloveitaly/github-overlord/compare/v0.3.0...v0.3.1) (2024-06-09)
 
 
@@ -36,15 +45,6 @@
 ### Bug Fixes
 
 * attempting to build via nixpacks ([211ab1a](https://github.com/iloveitaly/github-overlord/commit/211ab1abff37a203e8a7206fc842dc1892eac3bf))
-
-
-
-# [0.2.0](https://github.com/iloveitaly/github-overlord/compare/0228be966402f2ccf554a0c09ff5030db69985b8...v0.2.0) (2024-06-08)
-
-
-### Features
-
-* initial release ([0228be9](https://github.com/iloveitaly/github-overlord/commit/0228be966402f2ccf554a0c09ff5030db69985b8))
 
 
 
