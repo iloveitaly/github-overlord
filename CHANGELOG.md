@@ -1,3 +1,12 @@
+## [0.3.1](https://github.com/iloveitaly/github-overlord/compare/v0.3.0...v0.3.1) (2024-06-09)
+
+
+### Bug Fixes
+
+* another attempt at nixpacks action build ([2e548b7](https://github.com/iloveitaly/github-overlord/commit/2e548b795f3366951524bffbf3b6653b19d521ee))
+
+
+
 # [0.3.0](https://github.com/iloveitaly/github-overlord/compare/v0.2.2...v0.3.0) (2024-06-09)
 
 
