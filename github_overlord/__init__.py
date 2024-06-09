@@ -51,10 +51,6 @@ def is_eligible_for_merge(pr: PullRequest):
     if pr.user.login != "dependabot[bot]":
         return False
 
-    # pr_title = pr.title.lower()
-    # if "patch" not in pr_title and "github actions" not in pr_title:
-    #     return False
-
     last_commit = pr.get_commits().reversed[0]
     combined_status = last_commit.get_combined_status()
     status = combined_status.state
@@ -63,6 +59,7 @@ def is_eligible_for_merge(pr: PullRequest):
     if len(combined_status.statuses) > 0 and status != "success":
         return False
 
+    # checks are the CI runs
     all_checks_successful = (
         last_commit.get_check_runs() | fp.pluck_attr("conclusion") | fp.all("success")
     )
@@ -117,15 +114,21 @@ def main(token, dry_run, repo):
     log.info("dependabot pr check complete")
 
 
+@click.group()
+def cli():
+    pass
+
+
 @click.command()
 @click.option(
     "--token",
     help="GitHub token, can also be set via GITHUB_TOKEN",
     default=os.getenv("GITHUB_TOKEN"),
 )
+# TODO move this into the parent command
 @click.option("--dry-run", is_flag=True, help="Run script without merging PRs")
 @click.option("--repo", help="Only process a single repository")
-def cli(token, dry_run, repo):
+def dependabot(token, dry_run, repo):
     """
     Automatically merge dependabot PRs in public repos that have passed CI checks
     """
@@ -140,6 +143,8 @@ def cli(token, dry_run, repo):
 
     main(token, dry_run, repo)
 
+
+cli.add_command(dependabot)
 
 if __name__ == "__main__":
     cli()

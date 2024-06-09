@@ -1,8 +1,13 @@
+"""
+Not used right now, if we need more metadata, we should consider it
+"""
+
 # https://raw.githubusercontent.com/dependabot/fetch-metadata/main/src/dependabot/update_metadata.ts
 
 import re
-import yaml
 from typing import Callable, List, Optional, Protocol, TypedDict
+
+import yaml
 
 
 class DependencyAlert(TypedDict):
