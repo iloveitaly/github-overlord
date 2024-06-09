@@ -8,7 +8,7 @@ keywords = ["github", "dependabot", "automation"]
 homepage = "https://github.com/iloveitaly/github-overlord"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 pygithub = "^2.3.0"
 click = "^8.1.7"
 python-decouple-typed = "^3.11.0"
