@@ -71,29 +71,33 @@ def is_eligible_for_merge(pr: PullRequest):
 
 
 def process_repo(repo, dry_run):
-    log.debug("checking repository", repo=repo.full_name)
+    with log.context(repo=repo.full_name):
+        log.debug("checking repository")
 
-    if repo.fork:
-        log.debug("skipping forked repo")
-        return
+        if repo.fork:
+            log.debug("skipping forked repo")
+            return
 
-    pulls = repo.get_pulls(state="open")
+        pulls = repo.get_pulls(state="open")
 
-    if pulls.totalCount == 0:
-        log.debug("no open prs, skipping")
-        return
+        if pulls.totalCount == 0:
+            log.debug("no open prs, skipping")
+            return
 
-    merged_pr_count = 0
+        merged_pr_count = 0
 
-    for pr in pulls:
-        if is_eligible_for_merge(pr):
-            merge_pr(pr, dry_run)
+        for pr in pulls:
+            if is_eligible_for_merge(pr):
+                merge_pr(pr, dry_run)
 
-            merged_pr_count += 1
+                merged_pr_count += 1
+            else:
+                log.debug("skipping PR", url=pr.html_url)
+
+        if merged_pr_count == 0:
+            log.debug("no PRs were merged")
         else:
-            log.debug("skipping PR", url=pr.html_url)
-
-    log.info("merged prs", count=merged_pr_count)
+            log.info("merged prs", count=merged_pr_count)
 
 
 def main(token, dry_run, repo):
@@ -145,6 +149,13 @@ def dependabot(token, dry_run, repo):
 
 
 def pr_bumper():
+    """
+    Look at PRs which you have written:
+
+    1. There are bots out there which will close the PR if there are is no activity, even if there is no activity from
+       the maintainer. This will keep the PR open.
+    """
+
     pass
 
 
