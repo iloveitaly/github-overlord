@@ -1,0 +1,9 @@
+services:
+  github-overlord:
+    image: ghcr.io/iloveitaly/github-overlord:latest
+    restart: always
+    environment:
+      - GITHUB_TOKEN=
+      # the container will *not* assume the TZ of the host without this
+      # make sure your host has this set as well!
+      - TZ=${TZ}
