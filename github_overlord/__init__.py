@@ -144,6 +144,10 @@ def dependabot(token, dry_run, repo):
     main(token, dry_run, repo)
 
 
+def pr_bumper():
+    pass
+
+
 cli.add_command(dependabot)
 
 if __name__ == "__main__":
