@@ -64,7 +64,7 @@ def setup():
 
     configure_logger()
 
-    log.info("application setup")
+    log.debug("application setup")
 
     # local state in a method is strange, but it works :/
     setup.complete = True

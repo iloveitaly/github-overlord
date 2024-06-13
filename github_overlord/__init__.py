@@ -46,9 +46,11 @@ def is_eligible_for_merge(pr: PullRequest):
     resolve_async_status(pr, "mergeable")
 
     if not pr.mergeable:
+        log.debug("PR is not mergeable", url=pr.html_url)
         return False
 
     if pr.user.login != "dependabot[bot]":
+        log.debug("PR is not from dependabot", url=pr.html_url)
         return False
 
     last_commit = pr.get_commits().reversed[0]
@@ -57,14 +59,18 @@ def is_eligible_for_merge(pr: PullRequest):
 
     # status is different than CI runs!
     if len(combined_status.statuses) > 0 and status != "success":
+        log.debug("PR has failed status", url=pr.html_url, status=status)
         return False
 
     # checks are the CI runs
     all_checks_successful = (
-        last_commit.get_check_runs() | fp.pluck_attr("conclusion") | fp.all("success")
+        last_commit.get_check_runs()
+        | fp.pluck_attr("conclusion")
+        | fp.all({"success", "skipped"})
     )
 
     if not all_checks_successful:
+        log.debug("PR has failed checks", url=pr.html_url)
         return False
 
     return True
@@ -153,7 +159,8 @@ def pr_bumper():
     Look at PRs which you have written:
 
     1. There are bots out there which will close the PR if there are is no activity, even if there is no activity from
-       the maintainer. This will keep the PR open.
+       the maintainer. This will keep the PR open by adding a comment.
+    2. PRs that are not merged, been open for at least 30 days, with no comments from the maintainer.
     """
 
     pass
