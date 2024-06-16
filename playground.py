@@ -25,8 +25,5 @@ def get_pr_from_url(github, url):
 
 
 example_pr = "https://github.com/iloveitaly/funcy-pipe/pull/13"
-pr = g.get_repo("iloveitaly/funcy-pipe").get_pull(13)
-
-"https://api.github.com/repos/iloveitaly/asdf-devcontainer/pulls/13"
-example_pr = "https://github.com/iloveitaly/todoist-scheduler/pull/92"
+# pr = g.get_repo("iloveitaly/funcy-pipe").get_pull(13)
 pr = get_pr_from_url(g, example_pr)

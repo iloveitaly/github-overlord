@@ -1,6 +1,7 @@
 import os
 import re
 import time
+from types import NoneType
 
 import click
 import funcy_pipe as fp
@@ -42,11 +43,35 @@ def resolve_async_status(object, key):
             return
 
 
+def handle_stale_dependabot_pr(pr: PullRequest) -> None:
+    """
+    Handle a dependabot PR that has been open for at least 30 days and has conflicts
+    """
+
+    assert not pr.mergeable
+    assert pr.mergeable_state == "dirty"
+
+    if pr.body is None:
+        return
+
+    if "Automatic rebases have been disabled on this pull request" in pr.body:
+        log.info(
+            "PR has disabled automatic rebases, manually commenting", url=pr.html_url
+        )
+
+        pr.create_issue_comment("@dependabot rebase")
+
+
 def is_eligible_for_merge(pr: PullRequest):
     resolve_async_status(pr, "mergeable")
 
+    if pr.state == "closed":
+        log.debug("PR is closed", url=pr.html_url)
+        return
+
     if not pr.mergeable:
         log.debug("PR is not mergeable", url=pr.html_url)
+        handle_stale_dependabot_pr(pr)
         return False
 
     if pr.user.login != "dependabot[bot]":
@@ -86,7 +111,7 @@ def process_repo(repo, dry_run):
 
         pulls = repo.get_pulls(state="open")
 
-        if pulls.totalCount == 0:
+        if pulls.totalCount == 0 or pulls == NoneType:
             log.debug("no open prs, skipping")
             return
 
@@ -164,6 +189,23 @@ def pr_bumper():
     """
 
     pass
+
+
+"""
+    token = token or os.getenv('GITHUB_TOKEN')
+    if not token:
+        raise ValueError("GitHub token must be provided either as an option or via the GITHUB_TOKEN environment variable")
+
+    g = Github(token)
+    user = g.get_user()
+    notifications = user.get_notifications()
+
+    for notification in notifications:
+        print(f"Notification: {notification.subject['title']}, Reason: {notification.reason}")
+        if not read_only:
+            notification.mark_as_read()
+
+"""
 
 
 cli.add_command(dependabot)
