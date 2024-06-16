@@ -4,6 +4,7 @@
 
 GitHub Overlord is a Python script that automatically merges Dependabot PRs in public repositories that have passed CI checks.
 
+This simple project has also given me the chance to iterate on my nixpacks github actions project.
 
 ## Installation
 
