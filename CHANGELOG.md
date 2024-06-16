@@ -1,3 +1,12 @@
+## [0.4.4](https://github.com/iloveitaly/github-overlord/compare/v0.4.3...v0.4.4) (2024-06-16)
+
+
+### Bug Fixes
+
+* another nixpacks build ([0fed4e1](https://github.com/iloveitaly/github-overlord/commit/0fed4e167bda2170faead0f4ce15e0fd6dd4c731))
+
+
+
 ## [0.4.3](https://github.com/iloveitaly/github-overlord/compare/v0.4.2...v0.4.3) (2024-06-16)
 
 
@@ -31,15 +40,6 @@
 ### Features
 
 * handle stale dependabot prs ([75b3b00](https://github.com/iloveitaly/github-overlord/commit/75b3b0084eae36facf86f2d5832a52d07eac8e2b))
-
-
-
-## [0.3.3](https://github.com/iloveitaly/github-overlord/compare/v0.3.2...v0.3.3) (2024-06-13)
-
-
-### Bug Fixes
-
-* merge skip status checks ([a3c0e5d](https://github.com/iloveitaly/github-overlord/commit/a3c0e5d0765b3748747e6721e602c0021be0c8e1))
 
 
 
