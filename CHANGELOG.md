@@ -1,3 +1,12 @@
+# [0.4.0](https://github.com/iloveitaly/github-overlord/compare/v0.3.3...v0.4.0) (2024-06-16)
+
+
+### Features
+
+* handle stale dependabot prs ([75b3b00](https://github.com/iloveitaly/github-overlord/commit/75b3b0084eae36facf86f2d5832a52d07eac8e2b))
+
+
+
 ## [0.3.3](https://github.com/iloveitaly/github-overlord/compare/v0.3.2...v0.3.3) (2024-06-13)
 
 
@@ -36,15 +45,6 @@
 ### Features
 
 * adding cron ([d56487f](https://github.com/iloveitaly/github-overlord/commit/d56487f3e7ad0071ca33cba715ecc4cadc1b2cec))
-
-
-
-## [0.2.2](https://github.com/iloveitaly/github-overlord/compare/v0.2.1...v0.2.2) (2024-06-09)
-
-
-### Bug Fixes
-
-* drop py requirement for nixpacks build ([48f8ed1](https://github.com/iloveitaly/github-overlord/commit/48f8ed18be425215ff88e1f0c107005f075d24cd))
 
 
 
