@@ -1,3 +1,12 @@
+## [0.4.1](https://github.com/iloveitaly/github-overlord/compare/v0.4.0...v0.4.1) (2024-06-16)
+
+
+### Bug Fixes
+
+* attempt to build for a specific platform ([c6983da](https://github.com/iloveitaly/github-overlord/commit/c6983da410a633c5381f544449d1e8e174b2f60d))
+
+
+
 # [0.4.0](https://github.com/iloveitaly/github-overlord/compare/v0.3.3...v0.4.0) (2024-06-16)
 
 
@@ -31,20 +40,6 @@
 ### Bug Fixes
 
 * another attempt at nixpacks action build ([2e548b7](https://github.com/iloveitaly/github-overlord/commit/2e548b795f3366951524bffbf3b6653b19d521ee))
-
-
-
-# [0.3.0](https://github.com/iloveitaly/github-overlord/compare/v0.2.2...v0.3.0) (2024-06-09)
-
-
-### Bug Fixes
-
-* removing some build defaults, let's see if the nixpacks action works ([e4afe49](https://github.com/iloveitaly/github-overlord/commit/e4afe49a40f8a166c15c19148b2b9647ea5e704e))
-
-
-### Features
-
-* adding cron ([d56487f](https://github.com/iloveitaly/github-overlord/commit/d56487f3e7ad0071ca33cba715ecc4cadc1b2cec))
 
 
 
