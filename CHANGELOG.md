@@ -1,3 +1,12 @@
+# [0.6.0](https://github.com/iloveitaly/github-overlord/compare/v0.5.0...v0.6.0) (2024-06-20)
+
+
+### Features
+
+* let's trigger another build to test multi-arch ([f4ed48a](https://github.com/iloveitaly/github-overlord/commit/f4ed48ab43ca519b4b526a5e8a744e0089c61ef9))
+
+
+
 # [0.5.0](https://github.com/iloveitaly/github-overlord/compare/v0.4.4...v0.5.0) (2024-06-20)
 
 
@@ -32,15 +41,6 @@
 ### Bug Fixes
 
 * trigger another nixpacks gh action build ([e1845a9](https://github.com/iloveitaly/github-overlord/commit/e1845a9795e859d79dac39fc62aa9c756d369a3d))
-
-
-
-## [0.4.1](https://github.com/iloveitaly/github-overlord/compare/v0.4.0...v0.4.1) (2024-06-16)
-
-
-### Bug Fixes
-
-* attempt to build for a specific platform ([c6983da](https://github.com/iloveitaly/github-overlord/commit/c6983da410a633c5381f544449d1e8e174b2f60d))
 
 
 
