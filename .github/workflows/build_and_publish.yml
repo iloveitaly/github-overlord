@@ -90,5 +90,4 @@ jobs:
         uses: iloveitaly/github-action-nixpacks@main
         with:
           platforms: "linux/amd64,linux/arm64"
-          # platforms: "linux/arm64"
           push: true
