@@ -5,12 +5,12 @@ import re
 
 from github import Github
 
-token = os.getenv("GITHUB_TOKEN")
-g = Github(token)
+github_token = os.getenv("GITHUB_TOKEN")
+github = Github(github_token)
 
 
 # seems terrible
-def get_pr_from_url(github, url):
+def get_pr_from_url(url):
     # Extract the owner, repo, and PR number from the URL
     match = re.match(r"https://github.com/(.+)/(.+)/pull/(\d+)", url)
     if match is None:
@@ -25,5 +25,7 @@ def get_pr_from_url(github, url):
 
 
 example_pr = "https://github.com/iloveitaly/funcy-pipe/pull/13"
+stale_pr = "https://github.com/railwayapp/nixpacks/pull/1115"
+
 # pr = g.get_repo("iloveitaly/funcy-pipe").get_pull(13)
-pr = get_pr_from_url(g, example_pr)
+pr = get_pr_from_url(stale_pr)

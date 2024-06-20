@@ -7,8 +7,10 @@ import click
 import funcy_pipe as fp
 from github import Github
 from github.GithubObject import NotSet
+from github.Notification import Notification
 from github.PullRequest import PullRequest
 
+from github_overlord.stale_commenter import is_stale_comment
 from github_overlord.utils import log
 
 AUTOMATIC_MERGE_MESSAGE = "Automatically merged with GitHub overlord"
@@ -186,26 +188,36 @@ def pr_bumper():
     1. There are bots out there which will close the PR if there are is no activity, even if there is no activity from
        the maintainer. This will keep the PR open by adding a comment.
     2. PRs that are not merged, been open for at least 30 days, with no comments from the maintainer.
+
     """
+
+    issue = pr.as_issue()
+    comments = list(issue.get_comments())
+    last_comment = comments[-1]
+
+    is_stale, comment = is_stale_comment(last_comment)
+
+    if is_stale:
 
     pass
 
 
-"""
-    token = token or os.getenv('GITHUB_TOKEN')
-    if not token:
-        raise ValueError("GitHub token must be provided either as an option or via the GITHUB_TOKEN environment variable")
+def notifications(token, dry_run):
+    """
+    Look at notifications and mark them as read if they are dependabot notifications
+    """
 
     g = Github(token)
     user = g.get_user()
     notifications = user.get_notifications()
 
-    for notification in notifications:
-        print(f"Notification: {notification.subject['title']}, Reason: {notification.reason}")
-        if not read_only:
-            notification.mark_as_read()
+    def handle_notification(notification: Notification):
+        pass
 
-"""
+    # for notification in notifications:
+    #     print(f"Notification: {notification.subject['title']}, Reason: {notification.reason}")
+    #     if not read_only:
+    #         notification.mark_as_read()
 
 
 cli.add_command(dependabot)
