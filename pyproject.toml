@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "github-overlord"
-version = "0.6.2"
+version = "0.6.3"
 description = "Automatically merge Dependabot PRs in public repositories"
 authors = ["Michael Bianco <mike@mikebian.co>"]
 readme = "README.md"
