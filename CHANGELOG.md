@@ -1,3 +1,13 @@
+# [0.5.0](https://github.com/iloveitaly/github-overlord/compare/v0.4.4...v0.5.0) (2024-06-20)
+
+
+### Features
+
+* basic stale commenter is working ([5aedaf9](https://github.com/iloveitaly/github-overlord/commit/5aedaf9e6fcbe8ad4d7496b64a5e512c665d41c4))
+* tie stale keep alive into click ([1803559](https://github.com/iloveitaly/github-overlord/commit/18035592318156dd3d14aceda3b960d5f0be8180))
+
+
+
 ## [0.4.4](https://github.com/iloveitaly/github-overlord/compare/v0.4.3...v0.4.4) (2024-06-16)
 
 
@@ -31,15 +41,6 @@
 ### Bug Fixes
 
 * attempt to build for a specific platform ([c6983da](https://github.com/iloveitaly/github-overlord/commit/c6983da410a633c5381f544449d1e8e174b2f60d))
-
-
-
-# [0.4.0](https://github.com/iloveitaly/github-overlord/compare/v0.3.3...v0.4.0) (2024-06-16)
-
-
-### Features
-
-* handle stale dependabot prs ([75b3b00](https://github.com/iloveitaly/github-overlord/commit/75b3b0084eae36facf86f2d5832a52d07eac8e2b))
 
 
 
