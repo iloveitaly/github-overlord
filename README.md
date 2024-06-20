@@ -15,16 +15,14 @@ pip install github-overlord
 ## Usage
 
 ```shell
-Usage: github-overlord [OPTIONS]
-
-  Automatically merge dependabot PRs in public repos that have passed CI
-  checks
+Usage: github-overlord [OPTIONS] COMMAND [ARGS]...
 
 Options:
-  --token TEXT  GitHub token, can also be set via GITHUB_TOKEN
-  --dry-run     Run script without merging PRs
-  --repo TEXT   Only process a single repository
-  --help        Show this message and exit.
+  --help  Show this message and exit.
+
+Commands:
+  dependabot      Automatically merge dependabot PRs in public repos that...
+  keep-alive-prs
 ```
 
 ### Docker Cron
