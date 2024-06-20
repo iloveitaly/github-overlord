@@ -1,3 +1,12 @@
+## [0.6.2](https://github.com/iloveitaly/github-overlord/compare/v0.6.1...v0.6.2) (2024-06-20)
+
+
+### Bug Fixes
+
+* another build trigger ([871a4d9](https://github.com/iloveitaly/github-overlord/commit/871a4d9ca64adebd4e653eab11a4fdb9e57c1e2a))
+
+
+
 ## [0.6.1](https://github.com/iloveitaly/github-overlord/compare/v0.6.0...v0.6.1) (2024-06-20)
 
 
@@ -32,15 +41,6 @@
 ### Bug Fixes
 
 * another nixpacks build ([0fed4e1](https://github.com/iloveitaly/github-overlord/commit/0fed4e167bda2170faead0f4ce15e0fd6dd4c731))
-
-
-
-## [0.4.3](https://github.com/iloveitaly/github-overlord/compare/v0.4.2...v0.4.3) (2024-06-16)
-
-
-### Bug Fixes
-
-* trigger nixpacks build ([fd32394](https://github.com/iloveitaly/github-overlord/commit/fd32394c47c2bc5be42601f34f45dc143981824a))
 
 
 
