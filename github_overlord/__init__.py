@@ -10,7 +10,7 @@ from github.GithubObject import NotSet
 from github.Notification import Notification
 from github.PullRequest import PullRequest
 
-from github_overlord.stale_commenter import is_stale_comment
+from github_overlord.stale_commenter import check_for_stale_comments, is_stale_comment
 from github_overlord.utils import log
 
 AUTOMATIC_MERGE_MESSAGE = "Automatically merged with GitHub overlord"
@@ -156,6 +156,21 @@ def cli():
     pass
 
 
+def extract_repo_reference_from_github_url(url: str):
+    """
+    Extract the owner and repo from a GitHub URL
+    """
+
+    # convert 'https://github.com/iloveitaly/todoist-digest/pulls' to 'iloveitaly/todoist-digest'
+    if "github.com" in url:
+        match = re.search(r"github\.com/([^/]+)/([^/]+)", url)
+
+        if match:
+            url = f"{match.group(1)}/{match.group(2)}"
+
+    return url
+
+
 @click.command()
 @click.option(
     "--token",
@@ -170,36 +185,28 @@ def dependabot(token, dry_run, repo):
     Automatically merge dependabot PRs in public repos that have passed CI checks
     """
 
-    if repo:
-        # convert 'https://github.com/iloveitaly/todoist-digest/pulls' to 'iloveitaly/todoist-digest'
-        if "github.com" in repo:
-            match = re.search(r"github\.com/([^/]+)/([^/]+)", repo)
-
-            if match:
-                repo = f"{match.group(1)}/{match.group(2)}"
-
+    repo = extract_repo_reference_from_github_url(repo)
     main(token, dry_run, repo)
 
 
-def pr_bumper():
-    """
-    Look at PRs which you have written:
+@click.command()
+@click.option(
+    "--token",
+    help="GitHub token, can also be set via GITHUB_TOKEN",
+    default=os.getenv("GITHUB_TOKEN"),
+)
+# TODO move this into the parent command
+@click.option("--dry-run", is_flag=True, help="Run script without merging PRs")
+@click.option("--repo", help="Only process a single repository")
+def keep_alive_prs(token, dry_run, repo):
+    repo = extract_repo_reference_from_github_url(repo)
 
-    1. There are bots out there which will close the PR if there are is no activity, even if there is no activity from
-       the maintainer. This will keep the PR open by adding a comment.
-    2. PRs that are not merged, been open for at least 30 days, with no comments from the maintainer.
+    github = Github(token)
+    login = github.get_user().login
 
-    """
-
-    issue = pr.as_issue()
-    comments = list(issue.get_comments())
-    last_comment = comments[-1]
-
-    is_stale, comment = is_stale_comment(last_comment)
-
-    if is_stale:
-
-    pass
+    github.get_repo(repo).get_pulls(state="open") | fp.filter(
+        lambda pr: pr.user.login == login
+    ) | fp.map(check_for_stale_comments) | fp.to_list()
 
 
 def notifications(token, dry_run):
@@ -221,6 +228,7 @@ def notifications(token, dry_run):
 
 
 cli.add_command(dependabot)
+cli.add_command(keep_alive_prs)
 
 if __name__ == "__main__":
     cli()

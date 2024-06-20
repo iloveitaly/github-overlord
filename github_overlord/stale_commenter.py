@@ -1,7 +1,48 @@
 import json
 
 from github.IssueComment import IssueComment
+from github.PullRequest import PullRequest
 from openai import OpenAI
+
+from github_overlord.utils import log
+
+
+def check_for_stale_comments(pr: PullRequest):
+    """
+    Look at PRs which you have written:
+
+    1. There are bots out there which will close the PR if there are is no activity, even if there is no activity from
+       the maintainer. This will keep the PR open by adding a comment.
+    2. PRs that are not merged, been open for at least 30 days, with no comments from the maintainer.
+
+    """
+
+    log.debug("checking for stale comments", url=pr.html_url)
+
+    # PR comments are comments on the cod3
+    issue = pr.as_issue()
+    comments = list(issue.get_comments())
+
+    if len(comments) == 0:
+        return
+
+    last_comment = comments[-1]
+
+    # TODO this will need to be changed
+    if last_comment.user.login != "github-actions[bot]":
+        log.debug("Last comment is not from github-actions[bot]", url=pr.html_url)
+        return
+
+    is_stale, comment = is_stale_comment(last_comment)
+
+    if not is_stale:
+        log.debug("comment does not indicate stale state", url=pr.html_url)
+        return
+
+    log.info(
+        "comment indicates stale state, commenting", url=pr.html_url, comment=comment
+    )
+    # pr.create_issue_comment(comment)
 
 
 def is_stale_comment(comment: IssueComment):
