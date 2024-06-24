@@ -1,3 +1,12 @@
+## [0.6.4](https://github.com/iloveitaly/github-overlord/compare/v0.6.3...v0.6.4) (2024-06-24)
+
+
+### Bug Fixes
+
+* thread through dry_run for keep alive comments ([a9dd11e](https://github.com/iloveitaly/github-overlord/commit/a9dd11e4989e1627fdaf4ffbe3be29aeefd18ab0))
+
+
+
 ## [0.6.3](https://github.com/iloveitaly/github-overlord/compare/v0.6.2...v0.6.3) (2024-06-20)
 
 
@@ -31,16 +40,6 @@
 ### Features
 
 * let's trigger another build to test multi-arch ([f4ed48a](https://github.com/iloveitaly/github-overlord/commit/f4ed48ab43ca519b4b526a5e8a744e0089c61ef9))
-
-
-
-# [0.5.0](https://github.com/iloveitaly/github-overlord/compare/v0.4.4...v0.5.0) (2024-06-20)
-
-
-### Features
-
-* basic stale commenter is working ([5aedaf9](https://github.com/iloveitaly/github-overlord/commit/5aedaf9e6fcbe8ad4d7496b64a5e512c665d41c4))
-* tie stale keep alive into click ([1803559](https://github.com/iloveitaly/github-overlord/commit/18035592318156dd3d14aceda3b960d5f0be8180))
 
 
 
