@@ -185,7 +185,9 @@ def dependabot(token, dry_run, repo):
     Automatically merge dependabot PRs in public repos that have passed CI checks
     """
 
-    repo = extract_repo_reference_from_github_url(repo)
+    if repo:
+        repo = extract_repo_reference_from_github_url(repo)
+
     main(token, dry_run, repo)
 
 
@@ -206,7 +208,7 @@ def keep_alive_prs(token, dry_run, repo):
 
     github.get_repo(repo).get_pulls(state="open") | fp.filter(
         lambda pr: pr.user.login == login
-    ) | fp.map(check_for_stale_comments) | fp.to_list()
+    ) | fp.map(fp.partial(check_for_stale_comments, dry_run)) | fp.to_list()
 
 
 def notifications(token, dry_run):

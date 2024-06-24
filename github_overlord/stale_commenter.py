@@ -7,7 +7,7 @@ from openai import OpenAI
 from github_overlord.utils import log
 
 
-def check_for_stale_comments(pr: PullRequest):
+def check_for_stale_comments(dry_run: bool, pr: PullRequest):
     """
     Look at PRs which you have written:
 
@@ -42,7 +42,9 @@ def check_for_stale_comments(pr: PullRequest):
     log.info(
         "comment indicates stale state, commenting", url=pr.html_url, comment=comment
     )
-    # pr.create_issue_comment(comment)
+
+    if not dry_run:
+        pr.create_issue_comment(comment)
 
 
 def is_stale_comment(comment: IssueComment):
@@ -56,8 +58,8 @@ A GitHub pull request comment will be included with the author name. Determine i
 request will be closed, respond with a JSON object like:
 
 {
-"stale": "yes",
-"comment": "Friendly reminder on this pull request! Let me know what else may need to be done here."
+    "stale": "yes",
+    "comment": "Friendly reminder on this pull request! Let me know what else may need to be done here."
 }
 
 Adjust the comment wording slightly.
@@ -65,8 +67,13 @@ Adjust the comment wording slightly.
 If the comment does not indicate that the pull request will be closed, respond with:
 
 {
-"stale": "no",
+    "stale": "no",
 }
+
+Do not:
+
+* Ask for an update. This sound demanding.
+* Mention that the pull request will be closed.
 """
     comment_markdown = """
 Author: {comment.user.login}
