@@ -1,10 +1,24 @@
 import json
 
+import funcy_pipe as fp
+from github import Github
 from github.IssueComment import IssueComment
 from github.PullRequest import PullRequest
+from github.Repository import Repository
 from openai import OpenAI
 
 from github_overlord.utils import log
+
+
+def inspect_repo_for_stale_prs(dry_run: bool, login: str, repo: Repository):
+    log.debug("inspecting repo for stale PRs", repo=repo.full_name)
+
+    return (
+        repo.get_pulls(state="open")
+        | fp.filter(lambda pr: pr.user.login == login)
+        | fp.map(fp.partial(check_for_stale_comments, dry_run))
+        | fp.to_list()
+    )
 
 
 def check_for_stale_comments(dry_run: bool, pr: PullRequest):

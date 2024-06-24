@@ -7,6 +7,7 @@ from github import Github
 
 github_token = os.getenv("GITHUB_TOKEN")
 github = Github(github_token)
+user = github.get_user()
 
 
 # seems terrible

@@ -10,7 +10,11 @@ from github.GithubObject import NotSet
 from github.Notification import Notification
 from github.PullRequest import PullRequest
 
-from github_overlord.stale_commenter import check_for_stale_comments, is_stale_comment
+from github_overlord.stale_commenter import (
+    check_for_stale_comments,
+    inspect_repo_for_stale_prs,
+    is_stale_comment,
+)
 from github_overlord.utils import log
 
 AUTOMATIC_MERGE_MESSAGE = "Automatically merged with GitHub overlord"
@@ -156,10 +160,13 @@ def cli():
     pass
 
 
-def extract_repo_reference_from_github_url(url: str):
+def extract_repo_reference_from_github_url(url: str | None):
     """
     Extract the owner and repo from a GitHub URL
     """
+
+    if url is None:
+        return None
 
     # convert 'https://github.com/iloveitaly/todoist-digest/pulls' to 'iloveitaly/todoist-digest'
     if "github.com" in url:
@@ -185,8 +192,7 @@ def dependabot(token, dry_run, repo):
     Automatically merge dependabot PRs in public repos that have passed CI checks
     """
 
-    if repo:
-        repo = extract_repo_reference_from_github_url(repo)
+    repo = extract_repo_reference_from_github_url(repo)
 
     main(token, dry_run, repo)
 
@@ -201,14 +207,25 @@ def dependabot(token, dry_run, repo):
 @click.option("--dry-run", is_flag=True, help="Run script without merging PRs")
 @click.option("--repo", help="Only process a single repository")
 def keep_alive_prs(token, dry_run, repo):
-    repo = extract_repo_reference_from_github_url(repo)
+    assert token, "GitHub token is required"
+    # TODO should assert on openai setup
 
     github = Github(token)
-    login = github.get_user().login
+    user = github.get_user()
+    login = user.login
 
-    github.get_repo(repo).get_pulls(state="open") | fp.filter(
-        lambda pr: pr.user.login == login
-    ) | fp.map(fp.partial(check_for_stale_comments, dry_run)) | fp.to_list()
+    repo = extract_repo_reference_from_github_url(repo)
+
+    if repo:
+        inspect_repo_for_stale_prs(dry_run, login, github.get_repo(repo))
+        return
+
+    # TODO this isn't perfect because you may be a contributor :/
+    user.get_repos(type="public") | fp.filter(
+        lambda repo: repo.owner.login != login
+    ) | fp.map(fp.partial(inspect_repo_for_stale_prs, dry_run, login)) | fp.to_list()
+
+    log.info("stale PR check complete")
 
 
 def notifications(token, dry_run):
