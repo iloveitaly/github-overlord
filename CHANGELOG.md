@@ -1,3 +1,12 @@
+## [0.6.5](https://github.com/iloveitaly/github-overlord/compare/v0.6.4...v0.6.5) (2024-06-24)
+
+
+### Bug Fixes
+
+* dry run for stale prs is working ([acd8224](https://github.com/iloveitaly/github-overlord/commit/acd82246d956588a815a2a32f4cb8ac4d1e60e33))
+
+
+
 ## [0.6.4](https://github.com/iloveitaly/github-overlord/compare/v0.6.3...v0.6.4) (2024-06-24)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * updated readme to trigger build ([9020840](https://github.com/iloveitaly/github-overlord/commit/90208400f56bf27ebe99221a01a59546be64acc1))
-
-
-
-# [0.6.0](https://github.com/iloveitaly/github-overlord/compare/v0.5.0...v0.6.0) (2024-06-20)
-
-
-### Features
-
-* let's trigger another build to test multi-arch ([f4ed48a](https://github.com/iloveitaly/github-overlord/commit/f4ed48ab43ca519b4b526a5e8a744e0089c61ef9))
 
 
 
