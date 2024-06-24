@@ -1,3 +1,12 @@
+## [0.6.6](https://github.com/iloveitaly/github-overlord/compare/v0.6.5...v0.6.6) (2024-06-24)
+
+
+### Bug Fixes
+
+* add mit license ([3007e16](https://github.com/iloveitaly/github-overlord/commit/3007e16c6495b45efbce0102b12da4f66c6ae585))
+
+
+
 ## [0.6.5](https://github.com/iloveitaly/github-overlord/compare/v0.6.4...v0.6.5) (2024-06-24)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * another build trigger ([871a4d9](https://github.com/iloveitaly/github-overlord/commit/871a4d9ca64adebd4e653eab11a4fdb9e57c1e2a))
-
-
-
-## [0.6.1](https://github.com/iloveitaly/github-overlord/compare/v0.6.0...v0.6.1) (2024-06-20)
-
-
-### Bug Fixes
-
-* updated readme to trigger build ([9020840](https://github.com/iloveitaly/github-overlord/commit/90208400f56bf27ebe99221a01a59546be64acc1))
 
 
 
