@@ -7,7 +7,8 @@ from github_overlord import cli
 
 
 def job():
-    cli()
+    for command in list(cli.commands.values()):
+        command()
 
 
 def cron():

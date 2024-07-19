@@ -192,6 +192,8 @@ def dependabot(token, dry_run, repo):
     Automatically merge dependabot PRs in public repos that have passed CI checks
     """
 
+    log.info("merging dependabot PRs")
+
     repo = extract_repo_reference_from_github_url(repo)
 
     main(token, dry_run, repo)
@@ -210,6 +212,8 @@ def keep_alive_prs(token, dry_run, repo):
     assert token, "GitHub token is required"
     # TODO should assert on openai setup
 
+    log.info("checking for stale PRs")
+
     github = Github(token)
     user = github.get_user()
     login = user.login
@@ -220,8 +224,11 @@ def keep_alive_prs(token, dry_run, repo):
         inspect_repo_for_stale_prs(dry_run, login, github.get_repo(repo))
         return
 
+    def transform_forked_repos(repo):
+        return repo.parent if repo.fork else repo
+
     # TODO this isn't perfect because you may be a contributor :/
-    user.get_repos(type="public") | fp.filter(
+    user.get_repos(type="public") | fp.map(transform_forked_repos) | fp.filter(
         lambda repo: repo.owner.login != login
     ) | fp.map(fp.partial(inspect_repo_for_stale_prs, dry_run, login)) | fp.to_list()
 
