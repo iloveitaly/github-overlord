@@ -1,3 +1,12 @@
+## [0.6.7](https://github.com/iloveitaly/github-overlord/compare/v0.6.6...v0.6.7) (2024-07-19)
+
+
+### Bug Fixes
+
+* support multiple commands in scheduler, handle forked repos ([0cdac85](https://github.com/iloveitaly/github-overlord/commit/0cdac853e093f10ad10e46c699d9e1691fd65201))
+
+
+
 ## [0.6.6](https://github.com/iloveitaly/github-overlord/compare/v0.6.5...v0.6.6) (2024-06-24)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * another commit to create another build ([a5485c1](https://github.com/iloveitaly/github-overlord/commit/a5485c1a7d01734a01e1cc9c1a6e35e415dfb4c9))
-
-
-
-## [0.6.2](https://github.com/iloveitaly/github-overlord/compare/v0.6.1...v0.6.2) (2024-06-20)
-
-
-### Bug Fixes
-
-* another build trigger ([871a4d9](https://github.com/iloveitaly/github-overlord/commit/871a4d9ca64adebd4e653eab11a4fdb9e57c1e2a))
 
 
 
