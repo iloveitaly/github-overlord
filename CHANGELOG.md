@@ -1,3 +1,12 @@
+## [0.6.8](https://github.com/iloveitaly/github-overlord/compare/v0.6.7...v0.6.8) (2024-07-24)
+
+
+### Bug Fixes
+
+* handle click exits properly in cron scheduler ([84d0d1e](https://github.com/iloveitaly/github-overlord/commit/84d0d1e60ff03783e4bf4dd1ef36f38f032ee406))
+
+
+
 ## [0.6.7](https://github.com/iloveitaly/github-overlord/compare/v0.6.6...v0.6.7) (2024-07-19)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * thread through dry_run for keep alive comments ([a9dd11e](https://github.com/iloveitaly/github-overlord/commit/a9dd11e4989e1627fdaf4ffbe3be29aeefd18ab0))
-
-
-
-## [0.6.3](https://github.com/iloveitaly/github-overlord/compare/v0.6.2...v0.6.3) (2024-06-20)
-
-
-### Bug Fixes
-
-* another commit to create another build ([a5485c1](https://github.com/iloveitaly/github-overlord/commit/a5485c1a7d01734a01e1cc9c1a6e35e415dfb4c9))
 
 
 
