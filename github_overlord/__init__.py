@@ -17,7 +17,7 @@ from github_overlord.stale_commenter import (
 )
 from github_overlord.utils import log
 
-AUTOMATIC_MERGE_MESSAGE = "Automatically merged with GitHub overlord"
+AUTOMATIC_MERGE_MESSAGE = "Automatically merged with [github-overlord](https://github.com/iloveitaly/github-overlord)"
 
 
 def merge_pr(pr, dry_run):
@@ -137,7 +137,7 @@ def process_repo(repo, dry_run):
             log.info("merged prs", count=merged_pr_count)
 
 
-def main(token, dry_run, repo):
+def merge_dependabot_prs(token, dry_run, repo):
     assert token, "GitHub token is required"
 
     g = Github(token)
@@ -157,6 +157,11 @@ def main(token, dry_run, repo):
 
 @click.group()
 def cli():
+    """
+    GitHub Overlord is a tool to help manage annoying tasks across your GitHub repositories. Some of this could be done
+    by GitHub Actions, but this eliminates the need to carefully configure GH actions for each repo.
+    """
+
     pass
 
 
@@ -196,7 +201,7 @@ def dependabot(token, dry_run, repo):
 
     repo = extract_repo_reference_from_github_url(repo)
 
-    main(token, dry_run, repo)
+    merge_dependabot_prs(token, dry_run, repo)
 
 
 @click.command()
@@ -209,6 +214,10 @@ def dependabot(token, dry_run, repo):
 @click.option("--dry-run", is_flag=True, help="Run script without merging PRs")
 @click.option("--repo", help="Only process a single repository")
 def keep_alive_prs(token, dry_run, repo):
+    """
+    Detect when a bot is about to close a PR for no good reason and make a comment to keep it alive
+    """
+
     assert token, "GitHub token is required"
     # TODO should assert on openai setup
 

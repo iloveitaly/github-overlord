@@ -14,7 +14,9 @@ def inspect_repo_for_stale_prs(dry_run: bool, login: str, repo: Repository):
     log.debug("inspecting repo for stale PRs", repo=repo.full_name)
 
     return (
+        # there is not a way to filter by the user which created the PR! This take a long time on repos with many PRs
         repo.get_pulls(state="open")
+        # make sure the auth token user is the author of the PR
         | fp.filter(lambda pr: pr.user.login == login)
         | fp.map(fp.partial(check_for_stale_comments, dry_run))
         | fp.to_list()
