@@ -1,3 +1,12 @@
+## [0.6.9](https://github.com/iloveitaly/github-overlord/compare/v0.6.8...v0.6.9) (2024-07-26)
+
+
+### Bug Fixes
+
+* try catching system exit instead ([649ae27](https://github.com/iloveitaly/github-overlord/commit/649ae274f4f3c8fbd8e957449534d28315d30011))
+
+
+
 ## [0.6.8](https://github.com/iloveitaly/github-overlord/compare/v0.6.7...v0.6.8) (2024-07-24)
 
 
@@ -31,15 +40,6 @@
 ### Bug Fixes
 
 * dry run for stale prs is working ([acd8224](https://github.com/iloveitaly/github-overlord/commit/acd82246d956588a815a2a32f4cb8ac4d1e60e33))
-
-
-
-## [0.6.4](https://github.com/iloveitaly/github-overlord/compare/v0.6.3...v0.6.4) (2024-06-24)
-
-
-### Bug Fixes
-
-* thread through dry_run for keep alive comments ([a9dd11e](https://github.com/iloveitaly/github-overlord/commit/a9dd11e4989e1627fdaf4ffbe3be29aeefd18ab0))
 
 
 
