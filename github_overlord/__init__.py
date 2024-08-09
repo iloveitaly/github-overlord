@@ -5,6 +5,7 @@ from types import NoneType
 
 import click
 import funcy_pipe as fp
+import whatever as _
 from github import Github
 from github.GithubObject import NotSet
 from github.Notification import Notification
@@ -247,11 +248,47 @@ def keep_alive_prs(token, dry_run, repo):
 def notifications(token, dry_run):
     """
     Look at notifications and mark them as read if they are dependabot notifications
+
+    * Dependabot notifications
+    * Releases on repos I own
+    * Closed (merged, closed) pull requests on repos I own
+    * Closed pull requests that I authored
     """
 
-    g = Github(token)
-    user = g.get_user()
-    notifications = user.get_notifications()
+    github = Github(token)
+    user = github.get_user()
+    login = user.login
+
+    # all includes read notifications AND done notifications :/
+    # there is no way to determine if a notification is marked as done
+    notifications = list(user.get_notifications(all=True))
+
+    # TODO fix funcy_pipe here
+    released_on_owned_repos = (
+        notifications
+        | fp.filter(
+            lambda n: n.subject.type == "Release"
+            and n.repository.owner.login == login
+            # TODO I think there is a way to convert the instance method to a standard method so it could be mapped
+            #      patchy had some code for this
+        )
+        | fp.map(lambda n: n.mark_as_done())
+        | fp.to_list()
+    )
+
+    def is_dependabot_notification(notification: Notification) -> bool:
+        return notification.get_pull_request().user.login == "dependabot[bot]"
+
+    # TODO github digest has some logic to detect bots, maybev we can use that
+    pull_requests_by_dependabot = (
+        notifications
+        | fp.filter(lambda n: n.subject.type == "PullRequest")
+        | fp.filter(is_dependabot_notification)
+        | fp.map(Notification.mark_as_done)
+        | fp.to_list()
+    )
+
+    breakpoint()
 
     def handle_notification(notification: Notification):
         pass
