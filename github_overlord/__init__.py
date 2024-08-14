@@ -245,6 +245,17 @@ def keep_alive_prs(token, dry_run, repo):
     log.info("stale PR check complete")
 
 
+@click.command()
+@click.option(
+    "--token",
+    help="GitHub token, can also be set via GITHUB_TOKEN",
+    default=os.getenv("GITHUB_TOKEN"),
+)
+# TODO move this into the parent command
+@click.option("--dry-run", is_flag=True, help="Run script without merging PRs")
+@click.option(
+    "--only-unread", is_flag=True, help="Only process a single repository", default=True
+)
 def notifications(token, dry_run, only_unread):
     """
     Look at notifications and mark them as read if they are dependabot notifications
@@ -309,6 +320,7 @@ def notifications(token, dry_run, only_unread):
 
 cli.add_command(dependabot)
 cli.add_command(keep_alive_prs)
+cli.add_command(notifications)
 
 if __name__ == "__main__":
     cli()
