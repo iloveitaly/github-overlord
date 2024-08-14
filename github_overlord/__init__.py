@@ -5,7 +5,7 @@ from types import NoneType
 
 import click
 import funcy_pipe as fp
-import whatever as _
+import funcy as f
 from github import Github
 from github.GithubObject import NotSet
 from github.Notification import Notification
@@ -245,7 +245,7 @@ def keep_alive_prs(token, dry_run, repo):
     log.info("stale PR check complete")
 
 
-def notifications(token, dry_run):
+def notifications(token, dry_run, only_unread):
     """
     Look at notifications and mark them as read if they are dependabot notifications
 
@@ -261,7 +261,7 @@ def notifications(token, dry_run):
 
     # all includes read notifications AND done notifications :/
     # there is no way to determine if a notification is marked as done
-    notifications = list(user.get_notifications(all=True))
+    notifications = list(user.get_notifications(all=not only_unread))
 
     # TODO fix funcy_pipe here
     released_on_owned_repos = (
@@ -279,24 +279,32 @@ def notifications(token, dry_run):
     def is_dependabot_notification(notification: Notification) -> bool:
         return notification.get_pull_request().user.login == "dependabot[bot]"
 
+    def is_pull_request(notification: Notification) -> bool:
+        return notification.subject.type == "PullRequest"
+
+    def is_pull_request_open(notification: Notification) -> bool:
+        return notification.get_pull_request().state == "open"
+
     # TODO github digest has some logic to detect bots, maybev we can use that
     pull_requests_by_dependabot = (
         notifications
-        | fp.filter(lambda n: n.subject.type == "PullRequest")
+        | fp.filter(is_pull_request)
         | fp.filter(is_dependabot_notification)
         | fp.map(Notification.mark_as_done)
         | fp.to_list()
     )
 
-    breakpoint()
-
-    def handle_notification(notification: Notification):
-        pass
-
-    # for notification in notifications:
-    #     print(f"Notification: {notification.subject['title']}, Reason: {notification.reason}")
-    #     if not read_only:
-    #         notification.mark_as_read()
+    # Closed (merged, closed) pull requests that I authored
+    owned_closed_pull_requests = (
+        notifications
+        # PRs that I did not author may still be interesting
+        | fp.where_attr(reason="author")
+        | fp.filter(is_pull_request)
+        # TODO should use `fp`
+        | fp.filter(f.complement(is_pull_request_open))
+        | fp.map(Notification.mark_as_done)
+        | fp.to_list()
+    )
 
 
 cli.add_command(dependabot)
