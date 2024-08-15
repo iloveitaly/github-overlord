@@ -1,3 +1,19 @@
+# [0.7.0](https://github.com/iloveitaly/github-overlord/compare/v0.6.9...v0.7.0) (2024-08-15)
+
+
+### Bug Fixes
+
+* clear notificaitons for merged pull requests that you authored ([4b0de04](https://github.com/iloveitaly/github-overlord/commit/4b0de046da93b0fc7356947477d3bfb1ca75c823))
+* log command that is being run ([0a20df5](https://github.com/iloveitaly/github-overlord/commit/0a20df5a22ebb1f372f6ca516b0c6aad1670392c))
+
+
+### Features
+
+* add notifications command click integration ([399cd28](https://github.com/iloveitaly/github-overlord/commit/399cd28befe5f84842645cb0c8d11982cd9d71a7))
+* initial notification cleanup logic is working ([654a8c2](https://github.com/iloveitaly/github-overlord/commit/654a8c23e69d74e054132d5f7601c9d299edfc37))
+
+
+
 ## [0.6.9](https://github.com/iloveitaly/github-overlord/compare/v0.6.8...v0.6.9) (2024-07-26)
 
 
@@ -31,15 +47,6 @@
 ### Bug Fixes
 
 * add mit license ([3007e16](https://github.com/iloveitaly/github-overlord/commit/3007e16c6495b45efbce0102b12da4f66c6ae585))
-
-
-
-## [0.6.5](https://github.com/iloveitaly/github-overlord/compare/v0.6.4...v0.6.5) (2024-06-24)
-
-
-### Bug Fixes
-
-* dry run for stale prs is working ([acd8224](https://github.com/iloveitaly/github-overlord/commit/acd82246d956588a815a2a32f4cb8ac4d1e60e33))
 
 
 
