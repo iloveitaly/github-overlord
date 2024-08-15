@@ -60,8 +60,6 @@ def setup():
     # clear thread-local context
     log.clear = structlog.contextvars.clear_contextvars  # type: ignore
 
-    logger = log
-
     configure_logger()
 
     log.debug("application setup")

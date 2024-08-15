@@ -17,8 +17,12 @@ def handle_click_exit(func):
     return wrapper
 
 
+from github_overlord.utils import log
+
+
 def job():
     for command in list(cli.commands.values()):
+        log.info("running command", command=command.name)
         handle_click_exit(command)()
 
 
