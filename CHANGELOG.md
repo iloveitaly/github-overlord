@@ -1,3 +1,12 @@
+## [0.7.1](https://github.com/iloveitaly/github-overlord/compare/v0.7.0...v0.7.1) (2024-08-20)
+
+
+### Bug Fixes
+
+* better overlord logging ([28f7953](https://github.com/iloveitaly/github-overlord/commit/28f79539b182d25aae2d31338eb15387fe0fdca2))
+
+
+
 # [0.7.0](https://github.com/iloveitaly/github-overlord/compare/v0.6.9...v0.7.0) (2024-08-15)
 
 
@@ -38,15 +47,6 @@
 ### Bug Fixes
 
 * support multiple commands in scheduler, handle forked repos ([0cdac85](https://github.com/iloveitaly/github-overlord/commit/0cdac853e093f10ad10e46c699d9e1691fd65201))
-
-
-
-## [0.6.6](https://github.com/iloveitaly/github-overlord/compare/v0.6.5...v0.6.6) (2024-06-24)
-
-
-### Bug Fixes
-
-* add mit license ([3007e16](https://github.com/iloveitaly/github-overlord/commit/3007e16c6495b45efbce0102b12da4f66c6ae585))
 
 
 
