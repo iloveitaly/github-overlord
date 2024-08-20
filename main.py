@@ -4,6 +4,7 @@ from apscheduler.schedulers.background import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from github_overlord import cli
+from github_overlord.utils import log
 
 
 def handle_click_exit(func):
@@ -15,9 +16,6 @@ def handle_click_exit(func):
                 raise
 
     return wrapper
-
-
-from github_overlord.utils import log
 
 
 def job():

@@ -5,18 +5,15 @@ from types import NoneType
 
 import click
 import funcy_pipe as fp
-import funcy as f
 from github import Github
 from github.GithubObject import NotSet
 from github.Notification import Notification
 from github.PullRequest import PullRequest
 
-from github_overlord.stale_commenter import (
-    check_for_stale_comments,
-    inspect_repo_for_stale_prs,
-    is_stale_comment,
-)
-from github_overlord.utils import log
+import github_overlord.patch as _
+
+from .stale_commenter import inspect_repo_for_stale_prs
+from .utils import log
 
 AUTOMATIC_MERGE_MESSAGE = "Automatically merged with [github-overlord](https://github.com/iloveitaly/github-overlord)"
 
@@ -258,12 +255,14 @@ def keep_alive_prs(token, dry_run, repo):
 )
 def notifications(token, dry_run, only_unread):
     """
-    Look at notifications and mark them as read if they are dependabot notifications
+    Look at notifications and mark them as read if they are:
 
     * Dependabot notifications
     * Releases on repos I own
     * Closed (merged, closed) pull requests on repos I own
     * Closed pull requests that I authored
+
+    Helpful if you work across a lot of repos and want to keep your notifications clean.
     """
 
     github = Github(token)
@@ -283,9 +282,10 @@ def notifications(token, dry_run, only_unread):
             # TODO I think there is a way to convert the instance method to a standard method so it could be mapped
             #      patchy had some code for this
         )
-        | fp.map(lambda n: n.mark_as_done())
-        | fp.to_list()
+        | fp.lmap(Notification.mark_as_done)
     )
+
+    log.info("marked releases as done", count=len(released_on_owned_repos))
 
     def is_dependabot_notification(notification: Notification) -> bool:
         return notification.get_pull_request().user.login == "dependabot[bot]"
@@ -301,9 +301,10 @@ def notifications(token, dry_run, only_unread):
         notifications
         | fp.filter(is_pull_request)
         | fp.filter(is_dependabot_notification)
-        | fp.map(Notification.mark_as_done)
-        | fp.to_list()
+        | fp.lmap(Notification.mark_as_done)
     )
+
+    log.info("marked dependabot PRs as done", count=len(pull_requests_by_dependabot))
 
     # Closed (merged, closed) pull requests that I authored
     owned_closed_pull_requests = (
@@ -311,11 +312,11 @@ def notifications(token, dry_run, only_unread):
         # PRs that I did not author may still be interesting
         | fp.where_attr(reason="author")
         | fp.filter(is_pull_request)
-        # TODO should use `fp`
-        | fp.filter(f.complement(is_pull_request_open))
-        | fp.map(Notification.mark_as_done)
-        | fp.to_list()
+        | fp.filter(fp.complement(is_pull_request_open))
+        | fp.lmap(Notification.mark_as_done)
     )
+
+    log.info("marked owned closed PRs as done", count=len(owned_closed_pull_requests))
 
 
 cli.add_command(dependabot)

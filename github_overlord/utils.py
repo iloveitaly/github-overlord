@@ -9,8 +9,23 @@ from pathlib import Path
 import structlog
 from decouple import config
 
+root: Path
+
+# must type manually, unfortunately :/
+# https://www.structlog.org/en/21.3.0/types.html
+log: structlog.stdlib.BoundLogger
+
 
 def configure_logger():
+    global log
+
+    # context manager to auto-clear context
+    log.context = structlog.contextvars.bound_contextvars  # type: ignore
+    # set thread-local context
+    log.local = structlog.contextvars.bind_contextvars  # type: ignore
+    # clear thread-local context
+    log.clear = structlog.contextvars.clear_contextvars  # type: ignore
+
     logger_factory = structlog.PrintLoggerFactory()
 
     # allow user to specify a log in case they want to do something meaningful with the stdout
@@ -38,28 +53,15 @@ def configure_logger():
     )
 
 
-# must type manually, unfortunately :/
-# https://www.structlog.org/en/21.3.0/types.html
-log: structlog.stdlib.BoundLogger
-
-
 def setup():
     if hasattr(setup, "complete") and setup.complete:
         return
 
-    global root, logger, log
+    global root, log
 
     root = Path(__file__).parent.parent
 
     log = structlog.get_logger()
-
-    # context manager to auto-clear context
-    log.context = structlog.contextvars.bound_contextvars  # type: ignore
-    # set thread-local context
-    log.local = structlog.contextvars.bind_contextvars  # type: ignore
-    # clear thread-local context
-    log.clear = structlog.contextvars.clear_contextvars  # type: ignore
-
     configure_logger()
 
     log.debug("application setup")
