@@ -433,13 +433,13 @@ files = [
 
 [[package]]
 name = "funcy-pipe"
-version = "0.11.0"
+version = "0.11.1"
 description = "If Funcy and Pipe had a baby. Decorates all Funcy methods with Pipe superpowers."
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "funcy_pipe-0.11.0-py3-none-any.whl", hash = "sha256:3ad64a39ea9299e52edaba929803422bd80acc10e04ce1746f4fe549d54f461e"},
-    {file = "funcy_pipe-0.11.0.tar.gz", hash = "sha256:8dcedb05b13f4502e88ec75a794da1c4682ee3c6aab59c9a423cf42dc3b94805"},
+    {file = "funcy_pipe-0.11.1-py3-none-any.whl", hash = "sha256:9c0dee5218c4a87d1c5e7e27d622d6b84f526344cea8010c9d57cbc4937a5beb"},
+    {file = "funcy_pipe-0.11.1.tar.gz", hash = "sha256:5f23c8cf497e3fffdfd404ae8f5a676d314a584820faa839c7f5a40325d4393e"},
 ]
 
 [package.dependencies]
@@ -631,13 +631,13 @@ files = [
 
 [[package]]
 name = "openai"
-version = "1.41.0"
+version = "1.41.1"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.41.0-py3-none-any.whl", hash = "sha256:3b6cca4571667f3e0800442ef8f2bfa6a6f3301c51776bc7626159a4d81c242c"},
-    {file = "openai-1.41.0.tar.gz", hash = "sha256:26b81f39b49dce92ff5d30c373625ddb212c2f1050e1574e456d18423730cdd0"},
+    {file = "openai-1.41.1-py3-none-any.whl", hash = "sha256:56fb04105263f79559aff3ceea2e1dd16f8c5385e8238cb66cf0e6888fa8bfcf"},
+    {file = "openai-1.41.1.tar.gz", hash = "sha256:e38e376efd91e0d4db071e2a6517b6b4cac1c2a6fd63efdc5ec6be10c5967c1b"},
 ]
 
 [package.dependencies]
@@ -1018,13 +1018,13 @@ typing = ["mypy (>=1.4)", "rich", "twisted"]
 
 [[package]]
 name = "tomlkit"
-version = "0.13.0"
+version = "0.13.2"
 description = "Style preserving TOML library"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "tomlkit-0.13.0-py3-none-any.whl", hash = "sha256:7075d3042d03b80f603482d69bf0c8f345c2b30e41699fd8883227f89972b264"},
-    {file = "tomlkit-0.13.0.tar.gz", hash = "sha256:08ad192699734149f5b97b45f1f18dad7eb1b6d16bc72ad0c2335772650d7b72"},
+    {file = "tomlkit-0.13.2-py3-none-any.whl", hash = "sha256:7a974427f6e119197f670fbbbeae7bef749a6c14e793db934baefc1b5f03efde"},
+    {file = "tomlkit-0.13.2.tar.gz", hash = "sha256:fff5fe59a87295b278abd31bec92c15d9bc4a06885ab12bcea52c71119392e79"},
 ]
 
 [[package]]
@@ -1185,4 +1185,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "e1e6804464616cb3f34341593c0eb71c80c3d44ffd2098bffcb3d76f2e887eb1"
+content-hash = "51e775211f51008e2c83220d7785c987bace9472a08a35ce1c7e32614c32ac06"

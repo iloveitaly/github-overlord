@@ -12,10 +12,10 @@ python = "^3.11"
 pygithub = "^2.3.0"
 click = "^8.1.7"
 python-decouple-typed = "^3.11.0"
-funcy-pipe = "^0.11.0"
+funcy-pipe = "^0.11.1"
 structlog = "^24.4.0"
 apscheduler = "^3.10.4"
-openai = "^1.37.1"
+openai = "^1.41.1"
 
 [tool.poetry.scripts]
 github-overlord = "github_overlord:cli"
@@ -28,8 +28,8 @@ float_to_top = true
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
-black = "^24.4.2"
-pyright = "^1.1.373"
+black = "^24.8.0"
+pyright = "^1.1.376"
 pylint = "^3.2.6"
 
 [build-system]
