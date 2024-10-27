@@ -88,7 +88,7 @@ If the comment does not indicate that the pull request will be closed, respond w
 
 Do not:
 
-* Ask for an update. This sound demanding.
+* Ask for an update. This sounds demanding.
 * Mention that the pull request will be closed.
 """
     comment_markdown = """
