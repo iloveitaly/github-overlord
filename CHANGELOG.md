@@ -1,3 +1,12 @@
+## [0.7.2](https://github.com/iloveitaly/github-overlord/compare/v0.7.1...v0.7.2) (2024-10-27)
+
+
+### Bug Fixes
+
+* typo ([a6f3175](https://github.com/iloveitaly/github-overlord/commit/a6f3175e60bbff0a6cc4e20733267df792c3e5e0))
+
+
+
 ## [0.7.1](https://github.com/iloveitaly/github-overlord/compare/v0.7.0...v0.7.1) (2024-08-20)
 
 
@@ -38,15 +47,6 @@
 ### Bug Fixes
 
 * handle click exits properly in cron scheduler ([84d0d1e](https://github.com/iloveitaly/github-overlord/commit/84d0d1e60ff03783e4bf4dd1ef36f38f032ee406))
-
-
-
-## [0.6.7](https://github.com/iloveitaly/github-overlord/compare/v0.6.6...v0.6.7) (2024-07-19)
-
-
-### Bug Fixes
-
-* support multiple commands in scheduler, handle forked repos ([0cdac85](https://github.com/iloveitaly/github-overlord/commit/0cdac853e093f10ad10e46c699d9e1691fd65201))
 
 
 
