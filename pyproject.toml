@@ -30,7 +30,7 @@ float_to_top = true
 isort = ">=5.13.2,<7.0.0"
 black = ">=24.10,<26.0"
 pyright = "^1.1.386"
-pylint = "^3.3.1"
+pylint = ">=3.3.1,<5.0.0"
 
 [build-system]
 requires = ["poetry-core"]
