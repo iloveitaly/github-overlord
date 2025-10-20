@@ -27,7 +27,7 @@ profile = "black"
 float_to_top = true
 
 [tool.poetry.group.dev.dependencies]
-isort = ">=5.13.2,<7.0.0"
+isort = ">=5.13.2,<8.0.0"
 black = ">=24.10,<26.0"
 pyright = "^1.1.386"
 pylint = ">=3.3.1,<5.0.0"
