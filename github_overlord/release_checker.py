@@ -46,17 +46,17 @@ def should_create_release(repo: Repository) -> tuple[bool, str, str]:
     try:
         all_commits = list(repo.get_commits(since=baseline_date, sha=repo.default_branch))
     except GithubException as e:
-        log.error("failed to get commits", error=str(e))
+        log.error("failed to get commits", error=str(e), code=e.status if hasattr(e, 'status') else None)
         return False, "", ""
 
     # Limit to last 50 commits
     commits = all_commits[:50]
 
     if not commits:
-        log.debug("no commits since last release")
+        log.info("no commits since last release", last_release=baseline_tag or "none")
         return False, "", ""
 
-    log.debug("found commits since last release", count=len(commits))
+    log.info("analyzing commits", count=len(commits), total_available=len(all_commits))
 
     # Format commits for LLM
     commit_summary = format_commits_for_llm(commits)
@@ -84,14 +84,22 @@ def should_create_release(repo: Repository) -> tuple[bool, str, str]:
         release_notes = generate_release_notes(repo, commits, analysis)
 
         log.info(
-            "LLM recommends release",
+            "✓ LLM recommends release",
+            decision=analysis.get("should_release"),
+            confidence=analysis.get("confidence", 0),
             version=suggested_version,
+            bump=analysis.get("suggested_version_bump", "patch"),
             reasoning=analysis.get("reasoning", "")
         )
 
         return True, suggested_version, release_notes
 
-    log.debug("LLM does not recommend release", reasoning=analysis.get("reasoning", ""))
+    log.info(
+        "○ LLM does not recommend release",
+        decision=analysis.get("should_release", "no"),
+        confidence=analysis.get("confidence", 0),
+        reasoning=analysis.get("reasoning", "")
+    )
     return False, "", ""
 
 
@@ -231,7 +239,12 @@ def create_release(repo: Repository, tag: str, notes: str, dry_run: bool) -> boo
     """Create a new GitHub release."""
 
     if dry_run:
-        log.info("would create release", repo=repo.full_name, tag=tag)
+        log.info(
+            "DRY RUN: would create release",
+            repo=repo.full_name,
+            tag=tag,
+            notes_preview=notes[:200] + "..." if len(notes) > 200 else notes
+        )
         return True
 
     try:
@@ -244,27 +257,65 @@ def create_release(repo: Repository, tag: str, notes: str, dry_run: bool) -> boo
             target_commitish=repo.default_branch
         )
 
-        log.info("created release", repo=repo.full_name, tag=tag)
+        log.info("✓ created release", repo=repo.full_name, tag=tag)
         return True
 
     except GithubException as e:
-        log.error("failed to create release", repo=repo.full_name, error=str(e))
+        log.error("✗ failed to create release", repo=repo.full_name, error=str(e))
         return False
 
 
-def check_repo_for_release(repo: Repository, dry_run: bool):
-    """Check a single repository and create a release if recommended."""
+def check_repo_for_release(repo: Repository, dry_run: bool) -> dict:
+    """
+    Check a single repository and create a release if recommended.
+
+    Returns:
+        dict with keys: checked, skipped, created, failed
+    """
+
+    result = {
+        "checked": False,
+        "skipped": False,
+        "created": False,
+        "failed": False
+    }
 
     with log.context(repo=repo.full_name):
         log.debug("checking repository for release")
 
+        # Skip archived repos
         if repo.archived:
             log.debug("skipping archived repo")
-            return
+            result["skipped"] = True
+            return result
 
-        should_release, version, notes = should_create_release(repo)
+        # Skip empty repos
+        try:
+            if repo.size == 0:
+                log.debug("skipping empty repo")
+                result["skipped"] = True
+                return result
+        except Exception:
+            pass  # If we can't determine size, continue anyway
 
-        if should_release:
-            create_release(repo, version, notes, dry_run)
-        else:
-            log.debug("no release needed")
+        result["checked"] = True
+
+        try:
+            should_release, version, notes = should_create_release(repo)
+
+            if should_release:
+                success = create_release(repo, version, notes, dry_run)
+                if success:
+                    result["created"] = True
+                else:
+                    result["failed"] = True
+            else:
+                log.debug("no release needed")
+        except GithubException as e:
+            log.error("GitHub API error", error=str(e), status=e.status if hasattr(e, 'status') else None)
+            result["failed"] = True
+        except Exception as e:
+            log.error("unexpected error checking repository", error=str(e), error_type=type(e).__name__)
+            result["failed"] = True
+
+    return result

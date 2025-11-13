@@ -349,7 +349,13 @@ def check_releases(token, dry_run, topic, repo):
     repo = extract_repo_reference_from_github_url(repo)
 
     if repo:
-        check_repo_for_release(g.get_repo(repo), dry_run)
+        result = check_repo_for_release(g.get_repo(repo), dry_run)
+        if result["created"]:
+            log.info("✓ Release check complete - created 1 release")
+        elif result["failed"]:
+            log.info("✗ Release check complete - failed to create release")
+        else:
+            log.info("Release check complete - no release needed")
         return
 
     # Topic is required when not specifying a single repo
@@ -362,10 +368,37 @@ def check_releases(token, dry_run, topic, repo):
         lambda r: r.owner.login == user.login and not r.fork and topic in r.get_topics()
     )
 
-    # Process each repo
-    repos | fp.map(fp.partial(check_repo_for_release, dry_run=dry_run)) | fp.to_list()
+    # Process each repo and collect results
+    results = repos | fp.map(fp.partial(check_repo_for_release, dry_run=dry_run)) | fp.to_list()
 
-    log.info("release check complete")
+    # Check if any repos were found
+    if not results:
+        log.warning("no repositories found with topic", topic=topic)
+        return
+
+    # Calculate statistics
+    total_checked = sum(1 for r in results if r["checked"])
+    total_skipped = sum(1 for r in results if r["skipped"])
+    total_created = sum(1 for r in results if r["created"])
+    total_failed = sum(1 for r in results if r["failed"])
+
+    # Log summary
+    if dry_run:
+        log.info(
+            "DRY RUN: Release check complete",
+            checked=total_checked,
+            would_create=total_created,
+            skipped=total_skipped,
+            errors=total_failed
+        )
+    else:
+        log.info(
+            "✓ Release check complete",
+            checked=total_checked,
+            created=total_created,
+            skipped=total_skipped,
+            failed=total_failed
+        )
 
 
 cli.add_command(dependabot)
