@@ -56,10 +56,10 @@ github-overlord check-releases --topic starter --dry-run
 **Requirements:**
 - `GITHUB_TOKEN` environment variable (with repo write permissions)
 - `GOOGLE_API_KEY` environment variable ([Get a free API key](https://ai.google.dev/))
-- Optionally: `RELEASE_CHECKER_TOPIC` environment variable for default topic filtering
+- **Required:** `--topic` flag or `RELEASE_CHECKER_TOPIC` environment variable (unless using `--repo` for a single repository)
 
 **How it works:**
-1. Finds repositories matching the specified topic (or all your public repos if no topic specified)
+1. Finds repositories matching the specified topic
 2. For each repo, gets commits since the last release (or since repo creation if no releases)
 3. Analyzes up to the last 50 commits using Gemini to determine if a release is warranted
 4. If the LLM recommends a release, automatically creates one with:

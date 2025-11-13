@@ -352,15 +352,15 @@ def check_releases(token, dry_run, topic, repo):
         check_repo_for_release(g.get_repo(repo), dry_run)
         return
 
-    # Get all public repos owned by user
-    repos = user.get_repos(type="public") | fp.filter(
-        lambda r: r.owner.login == user.login and not r.fork
-    )
+    # Topic is required when not specifying a single repo
+    assert topic, "Topic is required when not specifying a single repository (use --topic or set RELEASE_CHECKER_TOPIC)"
 
-    # Filter by topic if specified
-    if topic:
-        log.info("filtering by topic", topic=topic)
-        repos = repos | fp.filter(lambda r: topic in r.get_topics())
+    log.info("filtering by topic", topic=topic)
+
+    # Get all public repos owned by user with the specified topic
+    repos = user.get_repos(type="public") | fp.filter(
+        lambda r: r.owner.login == user.login and not r.fork and topic in r.get_topics()
+    )
 
     # Process each repo
     repos | fp.map(fp.partial(check_repo_for_release, dry_run=dry_run)) | fp.to_list()
