@@ -79,6 +79,25 @@ analyzing commits count=3 total_available=3 repo=owner/repo2
 ✓ Release check complete checked=2 created=1 skipped=0 failed=0
 ```
 
+**Scheduling:**
+To run this weekly, set the `SCHEDULE` environment variable:
+```bash
+# Run every Monday at 9 AM
+export SCHEDULE="0 9 * * 1"
+export RELEASE_CHECKER_TOPIC="template"
+export GITHUB_TOKEN="your-token"
+export GOOGLE_API_KEY="your-api-key"
+
+# All CLI commands will run on this schedule
+python main.py
+```
+
+**Troubleshooting:**
+- **"No repositories found with topic"**: Make sure your repos have the correct topic tag in GitHub settings
+- **"GOOGLE_API_KEY environment variable is required"**: Get a free API key from [ai.google.dev](https://ai.google.dev/)
+- **Rate limiting**: The free tier has limits (15-60 requests/minute). Consider adding delays between repos if needed
+- **"Failed to create release"**: Ensure `GITHUB_TOKEN` has `repo` scope permissions
+
 ### Docker Cron
 
 There's a docker container you can use to run this on a cron. [Fits nicely into a orange pi.](https://mikebian.co/pi-hole-tailscale-and-docker-on-an-orange-pi/)
