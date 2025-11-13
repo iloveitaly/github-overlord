@@ -56,7 +56,6 @@ github-overlord check-releases --topic starter --dry-run
 **Requirements:**
 - `GITHUB_TOKEN` environment variable (with repo write permissions)
 - `GOOGLE_API_KEY` environment variable ([Get a free API key](https://ai.google.dev/))
-  - Legacy: `GEMINI_API_KEY` also supported for backwards compatibility
 - Optionally: `RELEASE_CHECKER_TOPIC` environment variable for default topic filtering
 
 **How it works:**
