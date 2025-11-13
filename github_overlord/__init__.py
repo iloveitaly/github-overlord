@@ -339,7 +339,9 @@ def check_releases(token, dry_run, topic, repo):
     """
 
     assert token, "GitHub token is required"
-    assert os.getenv("GEMINI_API_KEY"), "GEMINI_API_KEY environment variable is required"
+    # Support both GOOGLE_API_KEY (new) and GEMINI_API_KEY (legacy) for backwards compatibility
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    assert api_key, "GOOGLE_API_KEY or GEMINI_API_KEY environment variable is required"
 
     log.info("checking repositories for release readiness")
 

@@ -1,13 +1,23 @@
-import json
 import os
 from datetime import datetime, timezone
 
 import funcy_pipe as fp
 from github import GithubException
 from github.Repository import Repository
-from google import genai
+from pydantic import BaseModel, Field
+from pydantic_ai import Agent
 
 from github_overlord.utils import log
+
+
+class ReleaseAnalysis(BaseModel):
+    """Structured output from LLM analysis of commits."""
+
+    should_release: str = Field(description="yes, no, or maybe")
+    confidence: int = Field(ge=0, le=100, description="Confidence level 0-100")
+    reasoning: str = Field(description="Brief explanation in 1-2 sentences")
+    suggested_version_bump: str = Field(description="major, minor, or patch")
+    key_changes: list[str] = Field(description="List of key changes (2-5 items)")
 
 
 def should_create_release(repo: Repository) -> tuple[bool, str, str]:
@@ -104,7 +114,7 @@ def format_commits_for_llm(commits) -> str:
 
 
 def analyze_commits_with_llm(repo: Repository, commit_summary: str, commit_count: int, days_since_release: int, last_tag: str | None) -> dict:
-    """Use Gemini to analyze commits and determine if a release should be created."""
+    """Use Gemini via Pydantic AI to analyze commits and determine if a release should be created."""
 
     system_prompt = """
 You are analyzing commits for an open-source project to determine if a new release should be created.
@@ -115,15 +125,6 @@ Consider these factors:
 - Impact of changes (major features vs minor tweaks)
 - Time since last release (longer time = more likely, but not the only factor)
 - For template/starter projects: any meaningful updates warrant a release
-
-Return JSON with:
-{
-  "should_release": "yes" | "no" | "maybe",
-  "confidence": 0-100,
-  "reasoning": "brief explanation in 1-2 sentences",
-  "suggested_version_bump": "major" | "minor" | "patch",
-  "key_changes": ["change 1", "change 2", "change 3"]
-}
 
 Guidelines:
 - "yes" = clear value in creating a release (new features, important fixes, meaningful updates)
@@ -147,20 +148,20 @@ Commits:
 """
 
     try:
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
-            contents=f"{system_prompt}\n\n{user_content}",
-            config={
-                "response_mime_type": "application/json"
-            }
+        # Create agent with structured output
+        agent = Agent(
+            'google-gla:gemini-2.0-flash-exp',
+            result_type=ReleaseAnalysis,
+            system_prompt=system_prompt
         )
 
-        return json.loads(response.text)
+        result = agent.run_sync(user_content)
+
+        # Convert Pydantic model to dict for compatibility
+        return result.data.model_dump()
 
     except Exception as e:
-        log.error("Gemini API call failed", error=str(e))
+        log.error("LLM API call failed", error=str(e))
         return {}
 
 

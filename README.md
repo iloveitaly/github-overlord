@@ -34,7 +34,7 @@ Commands:
 
 ### Automatic Release Creation
 
-The `check-releases` command uses LLM analysis (via Google Gemini) to determine when repositories are ready for a new release. This is particularly useful for:
+The `check-releases` command uses LLM analysis (via [Pydantic AI](https://ai.pydantic.dev/) with Google Gemini) to determine when repositories are ready for a new release. Pydantic AI makes it easy to swap between different LLM providers if needed. This is particularly useful for:
 
 - Template repositories or starter projects that don't have automated release workflows
 - Projects where you want an AI to decide when enough changes have accumulated
@@ -55,7 +55,8 @@ github-overlord check-releases --topic starter --dry-run
 
 **Requirements:**
 - `GITHUB_TOKEN` environment variable (with repo write permissions)
-- `GEMINI_API_KEY` environment variable ([Get a free API key](https://ai.google.dev/))
+- `GOOGLE_API_KEY` environment variable ([Get a free API key](https://ai.google.dev/))
+  - Legacy: `GEMINI_API_KEY` also supported for backwards compatibility
 - Optionally: `RELEASE_CHECKER_TOPIC` environment variable for default topic filtering
 
 **How it works:**
