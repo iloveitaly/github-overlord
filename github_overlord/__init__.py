@@ -12,6 +12,7 @@ from github.PullRequest import PullRequest
 
 import github_overlord.patch as _
 
+from .release_checker import check_repo_for_release
 from .stale_commenter import inspect_repo_for_stale_prs
 from .utils import log
 
@@ -319,9 +320,58 @@ def notifications(token, dry_run, only_unread):
     log.info("marked owned closed PRs as done", count=len(owned_closed_pull_requests))
 
 
+@click.command()
+@click.option(
+    "--token",
+    help="GitHub token, can also be set via GITHUB_TOKEN",
+    default=os.getenv("GITHUB_TOKEN"),
+)
+@click.option("--dry-run", is_flag=True, help="Run script without creating releases")
+@click.option(
+    "--topic",
+    help="Only process repos with this topic (can also be set via RELEASE_CHECKER_TOPIC)",
+    default=os.getenv("RELEASE_CHECKER_TOPIC"),
+)
+@click.option("--repo", help="Only process a single repository")
+def check_releases(token, dry_run, topic, repo):
+    """
+    Check repositories for release readiness using LLM analysis and create releases when appropriate
+    """
+
+    assert token, "GitHub token is required"
+    assert os.getenv("GEMINI_API_KEY"), "GEMINI_API_KEY environment variable is required"
+
+    log.info("checking repositories for release readiness")
+
+    g = Github(token)
+    user = g.get_user()
+
+    repo = extract_repo_reference_from_github_url(repo)
+
+    if repo:
+        check_repo_for_release(g.get_repo(repo), dry_run)
+        return
+
+    # Get all public repos owned by user
+    repos = user.get_repos(type="public") | fp.filter(
+        lambda r: r.owner.login == user.login and not r.fork
+    )
+
+    # Filter by topic if specified
+    if topic:
+        log.info("filtering by topic", topic=topic)
+        repos = repos | fp.filter(lambda r: topic in r.get_topics())
+
+    # Process each repo
+    repos | fp.map(fp.partial(check_repo_for_release, dry_run=dry_run)) | fp.to_list()
+
+    log.info("release check complete")
+
+
 cli.add_command(dependabot)
 cli.add_command(keep_alive_prs)
 cli.add_command(notifications)
+cli.add_command(check_releases)
 
 if __name__ == "__main__":
     cli()
