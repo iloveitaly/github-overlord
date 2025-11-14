@@ -321,11 +321,6 @@ def notifications(token, dry_run, only_unread):
 
 
 @click.command()
-@click.option(
-    "--token",
-    help="GitHub token, can also be set via GITHUB_TOKEN",
-    default=os.getenv("GITHUB_TOKEN"),
-)
 @click.option("--dry-run", is_flag=True, help="Run script without creating releases")
 @click.option(
     "--topic",
@@ -333,12 +328,13 @@ def notifications(token, dry_run, only_unread):
     default=os.getenv("RELEASE_CHECKER_TOPIC"),
 )
 @click.option("--repo", help="Only process a single repository")
-def check_releases(token, dry_run, topic, repo):
+def check_releases(dry_run, topic, repo):
     """
     Check repositories for release readiness using LLM analysis and create releases when appropriate
     """
 
-    assert token, "GitHub token is required"
+    token = os.getenv("GITHUB_TOKEN")
+    assert token, "GITHUB_TOKEN environment variable is required"
     assert os.getenv("GOOGLE_API_KEY"), "GOOGLE_API_KEY environment variable is required"
 
     log.info("checking repositories for release readiness")

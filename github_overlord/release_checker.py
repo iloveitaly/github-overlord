@@ -157,8 +157,9 @@ Commits:
 
     try:
         # Create agent with structured output
+        # Using latest stable Gemini Flash model
         agent = Agent(
-            'google-gla:gemini-2.0-flash-exp',
+            'google-gla:gemini-2.0-flash',
             result_type=ReleaseAnalysis,
             system_prompt=system_prompt
         )
