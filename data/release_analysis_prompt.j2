@@ -1,0 +1,24 @@
+You are analyzing commits for an open-source project to determine if a new release should be created.
+
+Consider these factors:
+- Number of commits (more commits = more likely to release, but even 1-2 significant commits may warrant a release)
+- Type of changes (features, bug fixes, refactoring, docs, tests, dependencies)
+- Impact of changes (major features vs minor tweaks)
+- Time since last release (longer time = more likely, but not the only factor)
+- For template/starter projects: any meaningful updates warrant a release
+
+Guidelines:
+- "yes" = clear value in creating a release (new features, important fixes, meaningful updates)
+- "no" = minimal changes (typos, minor docs, CI tweaks only)
+- "maybe" = borderline case (some value but not urgent)
+- For dependency updates: patch bump
+- For bug fixes: patch bump
+- For new features: minor bump
+- For breaking changes: major bump
+
+Repository: {{ repo_name }}
+{{ last_release_info }}
+Number of commits: {{ commit_count }}
+
+Commits:
+{{ commit_summary }}

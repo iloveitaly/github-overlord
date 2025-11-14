@@ -1,13 +1,20 @@
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 import funcy_pipe as fp
+import jinja2
 from github import GithubException
 from github.Repository import Repository
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from github_overlord.utils import log
+
+# Set up paths
+ROOT_DIRECTORY = Path(__file__).parent.parent.resolve()
+DATA_DIRECTORY = ROOT_DIRECTORY / "data"
+RELEASE_ANALYSIS_PROMPT_TEMPLATE = DATA_DIRECTORY / "release_analysis_prompt.j2"
 
 
 class ReleaseAnalysis(BaseModel):
@@ -124,36 +131,24 @@ def format_commits_for_llm(commits) -> str:
 def analyze_commits_with_llm(repo: Repository, commit_summary: str, commit_count: int, days_since_release: int, last_tag: str | None) -> dict:
     """Use Gemini via Pydantic AI to analyze commits and determine if a release should be created."""
 
-    system_prompt = """
-You are analyzing commits for an open-source project to determine if a new release should be created.
+    # Load and render the Jinja template
+    env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(searchpath=str(DATA_DIRECTORY)),
+        autoescape=False,  # No HTML escaping needed for prompts
+        trim_blocks=True,
+        lstrip_blocks=True
+    )
 
-Consider these factors:
-- Number of commits (more commits = more likely to release, but even 1-2 significant commits may warrant a release)
-- Type of changes (features, bug fixes, refactoring, docs, tests, dependencies)
-- Impact of changes (major features vs minor tweaks)
-- Time since last release (longer time = more likely, but not the only factor)
-- For template/starter projects: any meaningful updates warrant a release
-
-Guidelines:
-- "yes" = clear value in creating a release (new features, important fixes, meaningful updates)
-- "no" = minimal changes (typos, minor docs, CI tweaks only)
-- "maybe" = borderline case (some value but not urgent)
-- For dependency updates: patch bump
-- For bug fixes: patch bump
-- For new features: minor bump
-- For breaking changes: major bump
-"""
+    template = env.get_template("release_analysis_prompt.j2")
 
     last_release_info = f"Last release: {last_tag} ({days_since_release} days ago)" if last_tag else f"No previous releases (repo is {days_since_release} days old)"
 
-    user_content = f"""
-Repository: {repo.full_name}
-{last_release_info}
-Number of commits: {commit_count}
-
-Commits:
-{commit_summary}
-"""
+    prompt = template.render(
+        repo_name=repo.full_name,
+        last_release_info=last_release_info,
+        commit_count=commit_count,
+        commit_summary=commit_summary
+    )
 
     try:
         # Create agent with structured output
@@ -161,10 +156,9 @@ Commits:
         agent = Agent(
             'google-gla:gemini-2.0-flash',
             result_type=ReleaseAnalysis,
-            system_prompt=system_prompt
         )
 
-        result = agent.run_sync(user_content)
+        result = agent.run_sync(prompt)
 
         # Convert Pydantic model to dict for compatibility
         return result.data.model_dump()
