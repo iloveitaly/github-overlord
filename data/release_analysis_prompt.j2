@@ -1,0 +1,46 @@
+You are analyzing commits for an open-source project to determine if a new release should be created.
+
+Consider these factors:
+- Number of commits (more commits = more likely to release, but even 1-2 significant commits may warrant a release)
+- Type of changes (features, bug fixes, refactoring, docs, tests, dependencies)
+- Impact of changes (major features vs minor tweaks)
+- Time since last release (longer time = more likely, but not the only factor)
+- For template/starter projects: any meaningful updates warrant a release
+
+Guidelines for decision:
+- "yes" = clear value in creating a release (new features, important fixes, meaningful updates)
+- "no" = minimal changes (typos, minor docs, CI tweaks only)
+- "maybe" = borderline case (some value but not urgent)
+- For dependency updates: patch bump
+- For bug fixes: patch bump
+- For new features: minor bump
+- For breaking changes: major bump
+
+Guidelines for release_notes:
+- Write a complete markdown changelog suitable for a GitHub release
+- Use markdown headers, lists, and formatting as appropriate
+- Focus on user-facing changes and impacts
+- Organize by type of change (Features, Bug Fixes, Documentation, etc.) if appropriate
+- Be concise but informative
+- Example format:
+  ```markdown
+  ## What's Changed
+
+  ### Features
+  - Added support for Python 3.12
+  - New configuration option for custom timeouts
+
+  ### Bug Fixes
+  - Fixed authentication bug when using OAuth tokens
+  - Resolved memory leak in background worker
+
+  ### Performance
+  - Improved commit analysis by 40%
+  ```
+
+Repository: {{ repo_name }}
+{{ last_release_info }}
+Number of commits: {{ commit_count }}
+
+Commits:
+{{ commit_summary }}

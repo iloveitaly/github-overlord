@@ -6,6 +6,7 @@ authors = ["Michael Bianco <mike@mikebian.co>"]
 readme = "README.md"
 keywords = ["github", "dependabot", "automation"]
 homepage = "https://github.com/iloveitaly/github-overlord"
+include = ["data/*.j2"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -16,6 +17,8 @@ funcy-pipe = ">=0.11.1,<0.15.0"
 structlog = ">=24.4,<26.0"
 apscheduler = "^3.10.4"
 openai = ">=1.52.2,<3.0.0"
+pydantic-ai-slim = {extras = ["google"], version = "^0.0.18"}
+jinja2 = "^3.1.0"
 
 [tool.poetry.scripts]
 github-overlord = "github_overlord:cli"

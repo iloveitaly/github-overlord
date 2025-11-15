@@ -12,6 +12,7 @@ from github.PullRequest import PullRequest
 
 import github_overlord.patch as _
 
+from .release_checker import check_repo_for_release
 from .stale_commenter import inspect_repo_for_stale_prs
 from .utils import log
 
@@ -319,9 +320,87 @@ def notifications(token, dry_run, only_unread):
     log.info("marked owned closed PRs as done", count=len(owned_closed_pull_requests))
 
 
+@click.command()
+@click.option("--dry-run", is_flag=True, help="Run script without creating releases")
+@click.option(
+    "--topic",
+    help="Only process repos with this topic (can also be set via RELEASE_CHECKER_TOPIC)",
+    default=os.getenv("RELEASE_CHECKER_TOPIC"),
+)
+@click.option("--repo", help="Only process a single repository")
+def check_releases(dry_run, topic, repo):
+    """
+    Check repositories for release readiness using LLM analysis and create releases when appropriate
+    """
+
+    token = os.getenv("GITHUB_TOKEN")
+    assert token, "GITHUB_TOKEN environment variable is required"
+    assert os.getenv("GOOGLE_API_KEY"), "GOOGLE_API_KEY environment variable is required"
+
+    log.info("checking repositories for release readiness")
+
+    g = Github(token)
+    user = g.get_user()
+
+    repo = extract_repo_reference_from_github_url(repo)
+
+    if repo:
+        result = check_repo_for_release(g.get_repo(repo), dry_run)
+        if result["created"]:
+            log.info("Release check complete - created 1 release")
+        elif result["failed"]:
+            log.info("Release check complete - failed to create release")
+        else:
+            log.info("Release check complete - no release needed")
+        return
+
+    # Topic is required when not specifying a single repo
+    assert topic, "Topic is required when not specifying a single repository (use --topic or set RELEASE_CHECKER_TOPIC)"
+
+    log.info("filtering by topic", topic=topic)
+
+    # Get all public repos owned by user with the specified topic
+    repos = user.get_repos(type="public") | fp.filter(
+        lambda r: r.owner.login == user.login and not r.fork and topic in r.get_topics()
+    )
+
+    # Process each repo and collect results
+    results = repos | fp.map(fp.partial(check_repo_for_release, dry_run=dry_run)) | fp.to_list()
+
+    # Check if any repos were found
+    if not results:
+        log.warning("no repositories found with topic", topic=topic)
+        return
+
+    # Calculate statistics
+    total_checked = sum(1 for r in results if r["checked"])
+    total_skipped = sum(1 for r in results if r["skipped"])
+    total_created = sum(1 for r in results if r["created"])
+    total_failed = sum(1 for r in results if r["failed"])
+
+    # Log summary
+    if dry_run:
+        log.info(
+            "DRY RUN: Release check complete",
+            checked=total_checked,
+            would_create=total_created,
+            skipped=total_skipped,
+            errors=total_failed
+        )
+    else:
+        log.info(
+            "Release check complete",
+            checked=total_checked,
+            created=total_created,
+            skipped=total_skipped,
+            failed=total_failed
+        )
+
+
 cli.add_command(dependabot)
 cli.add_command(keep_alive_prs)
 cli.add_command(notifications)
+cli.add_command(check_releases)
 
 if __name__ == "__main__":
     cli()
