@@ -1,20 +1,14 @@
 import os
 from datetime import datetime, timezone
-from pathlib import Path
 
 import funcy_pipe as fp
-import jinja2
 from github import GithubException
 from github.Repository import Repository
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
+from github_overlord.config import JINJA_ENV
 from github_overlord.utils import log
-
-# Set up paths
-ROOT_DIRECTORY = Path(__file__).parent.parent.resolve()
-DATA_DIRECTORY = ROOT_DIRECTORY / "data"
-RELEASE_ANALYSIS_PROMPT_TEMPLATE = DATA_DIRECTORY / "release_analysis_prompt.j2"
 
 
 class ReleaseAnalysis(BaseModel):
@@ -27,12 +21,20 @@ class ReleaseAnalysis(BaseModel):
     key_changes: list[str] = Field(description="List of key changes (2-5 items)")
 
 
-def should_create_release(repo: Repository) -> tuple[bool, str, str]:
+class ReleaseDecision(BaseModel):
+    """Decision about whether to create a release."""
+
+    should_create: bool
+    suggested_version: str
+    release_notes: str
+
+
+def should_create_release(repo: Repository) -> ReleaseDecision:
     """
     Analyze commits since last release and determine if a new release should be created.
 
     Returns:
-        Tuple of (should_create, suggested_version, release_notes)
+        ReleaseDecision with should_create, suggested_version, and release_notes
     """
 
     # Get the last release
@@ -54,14 +56,14 @@ def should_create_release(repo: Repository) -> tuple[bool, str, str]:
         all_commits = list(repo.get_commits(since=baseline_date, sha=repo.default_branch))
     except GithubException as e:
         log.error("failed to get commits", error=str(e), code=e.status if hasattr(e, 'status') else None)
-        return False, "", ""
+        return ReleaseDecision(should_create=False, suggested_version="", release_notes="")
 
     # Limit to last 50 commits
     commits = all_commits[:50]
 
     if not commits:
         log.info("no commits since last release", last_release=baseline_tag or "none")
-        return False, "", ""
+        return ReleaseDecision(should_create=False, suggested_version="", release_notes="")
 
     log.info("analyzing commits", count=len(commits), total_available=len(all_commits))
 
@@ -82,16 +84,16 @@ def should_create_release(repo: Repository) -> tuple[bool, str, str]:
 
     if not analysis:
         log.error("LLM analysis failed")
-        return False, "", ""
+        return ReleaseDecision(should_create=False, suggested_version="", release_notes="")
 
     should_release = analysis.get("should_release", "no") in ["yes", "maybe"]
 
     if should_release:
         suggested_version = calculate_next_version(baseline_tag, analysis.get("suggested_version_bump", "patch"))
-        release_notes = generate_release_notes(repo, commits, analysis)
+        release_notes = generate_release_notes(repo, baseline_tag, suggested_version, analysis)
 
         log.info(
-            "✓ LLM recommends release",
+            "LLM recommends release",
             decision=analysis.get("should_release"),
             confidence=analysis.get("confidence", 0),
             version=suggested_version,
@@ -99,15 +101,19 @@ def should_create_release(repo: Repository) -> tuple[bool, str, str]:
             reasoning=analysis.get("reasoning", "")
         )
 
-        return True, suggested_version, release_notes
+        return ReleaseDecision(
+            should_create=True,
+            suggested_version=suggested_version,
+            release_notes=release_notes
+        )
 
     log.info(
-        "○ LLM does not recommend release",
+        "LLM does not recommend release",
         decision=analysis.get("should_release", "no"),
         confidence=analysis.get("confidence", 0),
         reasoning=analysis.get("reasoning", "")
     )
-    return False, "", ""
+    return ReleaseDecision(should_create=False, suggested_version="", release_notes="")
 
 
 def format_commits_for_llm(commits) -> str:
@@ -131,15 +137,7 @@ def format_commits_for_llm(commits) -> str:
 def analyze_commits_with_llm(repo: Repository, commit_summary: str, commit_count: int, days_since_release: int, last_tag: str | None) -> dict:
     """Use Gemini via Pydantic AI to analyze commits and determine if a release should be created."""
 
-    # Load and render the Jinja template
-    env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(searchpath=str(DATA_DIRECTORY)),
-        autoescape=False,  # No HTML escaping needed for prompts
-        trim_blocks=True,
-        lstrip_blocks=True
-    )
-
-    template = env.get_template("release_analysis_prompt.j2")
+    template = JINJA_ENV.get_template("release_analysis_prompt.j2")
 
     last_release_info = f"Last release: {last_tag} ({days_since_release} days ago)" if last_tag else f"No previous releases (repo is {days_since_release} days old)"
 
@@ -152,9 +150,9 @@ def analyze_commits_with_llm(repo: Repository, commit_summary: str, commit_count
 
     try:
         # Create agent with structured output
-        # Using latest stable Gemini Flash model
+        # Using gemini-flash which points to latest flash model
         agent = Agent(
-            'google-gla:gemini-2.0-flash',
+            'google-gla:gemini-flash',
             result_type=ReleaseAnalysis,
         )
 
@@ -201,31 +199,31 @@ def calculate_next_version(current_tag: str | None, bump_type: str) -> str:
     return f"v{major}.{minor}.{patch}"
 
 
-def generate_release_notes(repo: Repository, commits, analysis: dict) -> str:
-    """Generate release notes based on commits and LLM analysis."""
+def generate_release_notes(repo: Repository, baseline_tag: str | None, new_tag: str, analysis: dict) -> str:
+    """Generate release notes from LLM analysis and add changelog link."""
 
     key_changes = analysis.get("key_changes", [])
-    reasoning = analysis.get("reasoning", "")
 
-    notes_lines = [
-        "## What's Changed",
-        "",
-        reasoning,
-        ""
-    ]
+    notes_lines = []
 
+    # Add key changes from LLM
     if key_changes:
-        notes_lines.append("### Key Changes")
         for change in key_changes:
             notes_lines.append(f"- {change}")
         notes_lines.append("")
 
-    # Add commit count
-    notes_lines.append(f"**{len(commits)} commits** in this release")
+    # Add horizontal line and Full Changelog link
+    notes_lines.append("---")
     notes_lines.append("")
 
-    # Add compare link (will be updated after release is created)
-    notes_lines.append("*This release was automatically generated by [github-overlord](https://github.com/iloveitaly/github-overlord)*")
+    if baseline_tag:
+        # Compare from last tag to new tag
+        changelog_url = f"https://github.com/{repo.full_name}/compare/{baseline_tag}...{new_tag}"
+    else:
+        # No previous release, link to all commits up to this tag
+        changelog_url = f"https://github.com/{repo.full_name}/commits/{new_tag}"
+
+    notes_lines.append(f"**Full Changelog**: {changelog_url}")
 
     return "\n".join(notes_lines)
 
@@ -252,11 +250,11 @@ def create_release(repo: Repository, tag: str, notes: str, dry_run: bool) -> boo
             target_commitish=repo.default_branch
         )
 
-        log.info("✓ created release", repo=repo.full_name, tag=tag)
+        log.info("created release", repo=repo.full_name, tag=tag)
         return True
 
     except GithubException as e:
-        log.error("✗ failed to create release", repo=repo.full_name, error=str(e))
+        log.error("failed to create release", repo=repo.full_name, error=str(e))
         return False
 
 
@@ -296,10 +294,10 @@ def check_repo_for_release(repo: Repository, dry_run: bool) -> dict:
         result["checked"] = True
 
         try:
-            should_release, version, notes = should_create_release(repo)
+            decision = should_create_release(repo)
 
-            if should_release:
-                success = create_release(repo, version, notes, dry_run)
+            if decision.should_create:
+                success = create_release(repo, decision.suggested_version, decision.release_notes, dry_run)
                 if success:
                     result["created"] = True
                 else:

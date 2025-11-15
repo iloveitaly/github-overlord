@@ -7,7 +7,7 @@ Consider these factors:
 - Time since last release (longer time = more likely, but not the only factor)
 - For template/starter projects: any meaningful updates warrant a release
 
-Guidelines:
+Guidelines for decision:
 - "yes" = clear value in creating a release (new features, important fixes, meaningful updates)
 - "no" = minimal changes (typos, minor docs, CI tweaks only)
 - "maybe" = borderline case (some value but not urgent)
@@ -15,6 +15,16 @@ Guidelines:
 - For bug fixes: patch bump
 - For new features: minor bump
 - For breaking changes: major bump
+
+Guidelines for key_changes:
+- Write 2-5 clear, concise bullet points describing the main changes
+- Focus on user-facing changes and impacts
+- Use markdown formatting
+- Each item should be a complete sentence or phrase
+- Examples:
+  * "Added support for Python 3.12"
+  * "Fixed authentication bug when using OAuth tokens"
+  * "Improved performance of commit analysis by 40%"
 
 Repository: {{ repo_name }}
 {{ last_release_info }}

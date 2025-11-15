@@ -347,9 +347,9 @@ def check_releases(dry_run, topic, repo):
     if repo:
         result = check_repo_for_release(g.get_repo(repo), dry_run)
         if result["created"]:
-            log.info("✓ Release check complete - created 1 release")
+            log.info("Release check complete - created 1 release")
         elif result["failed"]:
-            log.info("✗ Release check complete - failed to create release")
+            log.info("Release check complete - failed to create release")
         else:
             log.info("Release check complete - no release needed")
         return
@@ -389,7 +389,7 @@ def check_releases(dry_run, topic, repo):
         )
     else:
         log.info(
-            "✓ Release check complete",
+            "Release check complete",
             checked=total_checked,
             created=total_created,
             skipped=total_skipped,
