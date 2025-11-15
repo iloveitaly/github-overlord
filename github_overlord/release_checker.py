@@ -18,7 +18,7 @@ class ReleaseAnalysis(BaseModel):
     confidence: int = Field(ge=0, le=100, description="Confidence level 0-100")
     reasoning: str = Field(description="Brief explanation in 1-2 sentences")
     suggested_version_bump: str = Field(description="major, minor, or patch")
-    key_changes: list[str] = Field(description="List of key changes (2-5 items)")
+    release_notes: str = Field(description="Full markdown changelog for the release")
 
 
 class ReleaseDecision(BaseModel):
@@ -202,19 +202,19 @@ def calculate_next_version(current_tag: str | None, bump_type: str) -> str:
 def generate_release_notes(repo: Repository, baseline_tag: str | None, new_tag: str, analysis: dict) -> str:
     """Generate release notes from LLM analysis and add changelog link."""
 
-    key_changes = analysis.get("key_changes", [])
+    # Get the markdown changelog from LLM
+    llm_changelog = analysis.get("release_notes", "").strip()
 
-    notes_lines = []
+    # Build the full release notes
+    notes_parts = []
 
-    # Add key changes from LLM
-    if key_changes:
-        for change in key_changes:
-            notes_lines.append(f"- {change}")
-        notes_lines.append("")
+    if llm_changelog:
+        notes_parts.append(llm_changelog)
+        notes_parts.append("")  # Empty line before separator
 
     # Add horizontal line and Full Changelog link
-    notes_lines.append("---")
-    notes_lines.append("")
+    notes_parts.append("---")
+    notes_parts.append("")
 
     if baseline_tag:
         # Compare from last tag to new tag
@@ -223,9 +223,9 @@ def generate_release_notes(repo: Repository, baseline_tag: str | None, new_tag: 
         # No previous release, link to all commits up to this tag
         changelog_url = f"https://github.com/{repo.full_name}/commits/{new_tag}"
 
-    notes_lines.append(f"**Full Changelog**: {changelog_url}")
+    notes_parts.append(f"**Full Changelog**: {changelog_url}")
 
-    return "\n".join(notes_lines)
+    return "\n".join(notes_parts)
 
 
 def create_release(repo: Repository, tag: str, notes: str, dry_run: bool) -> bool:

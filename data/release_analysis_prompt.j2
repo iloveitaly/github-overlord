@@ -16,15 +16,27 @@ Guidelines for decision:
 - For new features: minor bump
 - For breaking changes: major bump
 
-Guidelines for key_changes:
-- Write 2-5 clear, concise bullet points describing the main changes
+Guidelines for release_notes:
+- Write a complete markdown changelog suitable for a GitHub release
+- Use markdown headers, lists, and formatting as appropriate
 - Focus on user-facing changes and impacts
-- Use markdown formatting
-- Each item should be a complete sentence or phrase
-- Examples:
-  * "Added support for Python 3.12"
-  * "Fixed authentication bug when using OAuth tokens"
-  * "Improved performance of commit analysis by 40%"
+- Organize by type of change (Features, Bug Fixes, Documentation, etc.) if appropriate
+- Be concise but informative
+- Example format:
+  ```markdown
+  ## What's Changed
+
+  ### Features
+  - Added support for Python 3.12
+  - New configuration option for custom timeouts
+
+  ### Bug Fixes
+  - Fixed authentication bug when using OAuth tokens
+  - Resolved memory leak in background worker
+
+  ### Performance
+  - Improved commit analysis by 40%
+  ```
 
 Repository: {{ repo_name }}
 {{ last_release_info }}
