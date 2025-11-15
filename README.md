@@ -67,18 +67,6 @@ github-overlord check-releases --topic starter --dry-run
    - AI-generated release notes highlighting key changes
    - Link to full changelog
 
-**Example output:**
-```
-checking repositories for release readiness
-filtering by topic topic=template
-analyzing commits count=12 total_available=12 repo=owner/repo1
-LLM recommends release decision=yes confidence=85 version=v1.2.0 bump=minor
-created release repo=owner/repo1 tag=v1.2.0
-analyzing commits count=3 total_available=3 repo=owner/repo2
-LLM does not recommend release decision=no confidence=70
-Release check complete checked=2 created=1 skipped=0 failed=0
-```
-
 **Scheduling:**
 To run this weekly, set the `SCHEDULE` environment variable:
 ```bash
