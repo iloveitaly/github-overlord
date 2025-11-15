@@ -1,3 +1,12 @@
+# [0.8.0](https://github.com/iloveitaly/github-overlord/compare/v0.7.2...v0.8.0) (2025-11-15)
+
+
+### Features
+
+* plan automated release detection using GitHub API ([#158](https://github.com/iloveitaly/github-overlord/issues/158)) ([aefbccc](https://github.com/iloveitaly/github-overlord/commit/aefbccc9c3bcc1a2fa4263161ab8f78610d5b6f3))
+
+
+
 ## [0.7.2](https://github.com/iloveitaly/github-overlord/compare/v0.7.1...v0.7.2) (2024-10-27)
 
 
@@ -38,15 +47,6 @@
 ### Bug Fixes
 
 * try catching system exit instead ([649ae27](https://github.com/iloveitaly/github-overlord/commit/649ae274f4f3c8fbd8e957449534d28315d30011))
-
-
-
-## [0.6.8](https://github.com/iloveitaly/github-overlord/compare/v0.6.7...v0.6.8) (2024-07-24)
-
-
-### Bug Fixes
-
-* handle click exits properly in cron scheduler ([84d0d1e](https://github.com/iloveitaly/github-overlord/commit/84d0d1e60ff03783e4bf4dd1ef36f38f032ee406))
 
 
 
