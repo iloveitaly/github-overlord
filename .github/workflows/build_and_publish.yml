@@ -23,8 +23,6 @@ jobs:
 
       - name: Install Mise
         uses: jdx/mise-action@v2
-        with:
-          config_file: mise.ci.toml
 
       - name: Install dependencies
         run: |
