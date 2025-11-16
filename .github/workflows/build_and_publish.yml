@@ -21,31 +21,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: ASDF Parse
-        uses: kota65535/github-asdf-parse-action@v2.0.0
-        id: versions
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ steps.versions.outputs.python }}"
-
-      - name: Install Poetry
-        uses: Gr1N/setup-poetry@v9
-        with:
-          poetry-version: "${{ steps.versions.outputs.poetry }}"
+      - name: Install Mise
+        uses: jdx/mise-action@v2
 
       - name: Install dependencies
         run: |
-          poetry install
+          uv sync --all-groups
 
       - name: Make sure it runs
         run: |
-          poetry run github-overlord --help
+          uv run github-overlord --help
 
-      - name: Poetry Check
+      - name: UV Check
         run: |
-          poetry check --lock
+          uv lock --check
 
       - name: Conventional Changelog Action
         id: changelog
@@ -53,7 +42,7 @@ jobs:
         with:
           github-token: ${{ secrets.github_token }}
           version-file: "./pyproject.toml"
-          version-path: "tool.poetry.version"
+          version-path: "project.version"
           fallback-version: "1.0.0"
           output-file: "CHANGELOG.md"
 
@@ -61,13 +50,13 @@ jobs:
       - name: Build distribution package
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
         run: |
-          poetry build
+          uv build
 
       - name: Publish to PyPI
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
         run: |
           # `gh secret set PYPI_API_TOKEN --app actions --body $PYPI_API_TOKEN`
-          poetry publish -u __token__ -p ${{ secrets.PYPI_API_TOKEN }}
+          uv publish --token ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Github Release
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
