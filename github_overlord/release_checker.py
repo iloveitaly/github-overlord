@@ -1,3 +1,10 @@
+"""
+Logic for analyzing repository commits and determining if a new release should be created.
+
+Uses LLM analysis to evaluate the significance of changes since the last release,
+calculates semantic version bumps, and generates formatted release notes.
+"""
+
 import os
 from datetime import datetime, timezone
 
