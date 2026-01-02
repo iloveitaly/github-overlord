@@ -8,7 +8,6 @@ calculates semantic version bumps, and generates formatted release notes.
 import os
 from datetime import datetime, timezone
 
-import funcy_pipe as fp
 from github import GithubException
 from github.Repository import Repository
 from pydantic import BaseModel, Field
@@ -60,17 +59,27 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
 
     # Get commits since baseline (limit to 50)
     try:
-        all_commits = list(repo.get_commits(since=baseline_date, sha=repo.default_branch))
+        all_commits = list(
+            repo.get_commits(since=baseline_date, sha=repo.default_branch)
+        )
     except GithubException as e:
-        log.error("failed to get commits", error=str(e), code=e.status if hasattr(e, 'status') else None)
-        return ReleaseDecision(should_create=False, suggested_version="", release_notes="")
+        log.error(
+            "failed to get commits",
+            error=str(e),
+            code=e.status if hasattr(e, "status") else None,
+        )
+        return ReleaseDecision(
+            should_create=False, suggested_version="", release_notes=""
+        )
 
     # Limit to last 50 commits
     commits = all_commits[:50]
 
     if not commits:
         log.info("no commits since last release", last_release=baseline_tag or "none")
-        return ReleaseDecision(should_create=False, suggested_version="", release_notes="")
+        return ReleaseDecision(
+            should_create=False, suggested_version="", release_notes=""
+        )
 
     log.info("analyzing commits", count=len(commits), total_available=len(all_commits))
 
@@ -86,18 +95,24 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
         commit_summary=commit_summary,
         commit_count=len(commits),
         days_since_release=days_since_release,
-        last_tag=baseline_tag
+        last_tag=baseline_tag,
     )
 
     if not analysis:
         log.error("LLM analysis failed")
-        return ReleaseDecision(should_create=False, suggested_version="", release_notes="")
+        return ReleaseDecision(
+            should_create=False, suggested_version="", release_notes=""
+        )
 
     should_release = analysis.get("should_release", "no") in ["yes", "maybe"]
 
     if should_release:
-        suggested_version = calculate_next_version(baseline_tag, analysis.get("suggested_version_bump", "patch"))
-        release_notes = generate_release_notes(repo, baseline_tag, suggested_version, analysis)
+        suggested_version = calculate_next_version(
+            baseline_tag, analysis.get("suggested_version_bump", "patch")
+        )
+        release_notes = generate_release_notes(
+            repo, baseline_tag, suggested_version, analysis
+        )
 
         log.info(
             "LLM recommends release",
@@ -105,20 +120,20 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
             confidence=analysis.get("confidence", 0),
             version=suggested_version,
             bump=analysis.get("suggested_version_bump", "patch"),
-            reasoning=analysis.get("reasoning", "")
+            reasoning=analysis.get("reasoning", ""),
         )
 
         return ReleaseDecision(
             should_create=True,
             suggested_version=suggested_version,
-            release_notes=release_notes
+            release_notes=release_notes,
         )
 
     log.info(
         "LLM does not recommend release",
         decision=analysis.get("should_release", "no"),
         confidence=analysis.get("confidence", 0),
-        reasoning=analysis.get("reasoning", "")
+        reasoning=analysis.get("reasoning", ""),
     )
     return ReleaseDecision(should_create=False, suggested_version="", release_notes="")
 
@@ -141,32 +156,49 @@ def format_commits_for_llm(commits) -> str:
     return "\n".join(commit_lines)
 
 
-def analyze_commits_with_llm(repo: Repository, commit_summary: str, commit_count: int, days_since_release: int, last_tag: str | None) -> dict:
+def analyze_commits_with_llm(
+    repo: Repository,
+    commit_summary: str,
+    commit_count: int,
+    days_since_release: int,
+    last_tag: str | None,
+) -> dict:
     """Use Gemini via Pydantic AI to analyze commits and determine if a release should be created."""
+
+    if not os.getenv("GOOGLE_API_KEY"):
+        log.error(
+            "GOOGLE_API_KEY environment variable is not set; skipping LLM analysis"
+        )
+        return {}
 
     template = JINJA_ENV.get_template("release_analysis_prompt.j2")
 
-    last_release_info = f"Last release: {last_tag} ({days_since_release} days ago)" if last_tag else f"No previous releases (repo is {days_since_release} days old)"
+    last_release_info = (
+        f"Last release: {last_tag} ({days_since_release} days ago)"
+        if last_tag
+        else f"No previous releases (repo is {days_since_release} days old)"
+    )
 
     prompt = template.render(
         repo_name=repo.full_name,
         last_release_info=last_release_info,
         commit_count=commit_count,
-        commit_summary=commit_summary
+        commit_summary=commit_summary,
     )
 
     try:
         # Create agent with structured output
         # Using gemini-flash which points to latest flash model
         agent = Agent(
-            'google-gla:gemini-flash',
-            result_type=ReleaseAnalysis,
+            # https://ai.google.dev/api/models?referrer=grok.com
+            "google-gla:models/gemini-3-flash-preview",
+            output_type=ReleaseAnalysis,
         )
 
         result = agent.run_sync(prompt)
 
-        # Convert Pydantic model to dict for compatibility
-        return result.data.model_dump()
+        # pydantic-ai v1.38+: structured output is returned on `result.output`.
+        return result.output.model_dump()
 
     except Exception as e:
         log.error("LLM API call failed", error=str(e))
@@ -206,7 +238,9 @@ def calculate_next_version(current_tag: str | None, bump_type: str) -> str:
     return f"v{major}.{minor}.{patch}"
 
 
-def generate_release_notes(repo: Repository, baseline_tag: str | None, new_tag: str, analysis: dict) -> str:
+def generate_release_notes(
+    repo: Repository, baseline_tag: str | None, new_tag: str, analysis: dict
+) -> str:
     """Generate release notes from LLM analysis and add changelog link."""
 
     # Get the markdown changelog from LLM
@@ -225,7 +259,9 @@ def generate_release_notes(repo: Repository, baseline_tag: str | None, new_tag: 
 
     if baseline_tag:
         # Compare from last tag to new tag
-        changelog_url = f"https://github.com/{repo.full_name}/compare/{baseline_tag}...{new_tag}"
+        changelog_url = (
+            f"https://github.com/{repo.full_name}/compare/{baseline_tag}...{new_tag}"
+        )
     else:
         # No previous release, link to all commits up to this tag
         changelog_url = f"https://github.com/{repo.full_name}/commits/{new_tag}"
@@ -240,10 +276,11 @@ def create_release(repo: Repository, tag: str, notes: str, dry_run: bool) -> boo
 
     if dry_run:
         log.info(
-            "DRY RUN: would create release",
+            "would create release",
+            dry_run=True,
             repo=repo.full_name,
             tag=tag,
-            notes_preview=notes[:200] + "..." if len(notes) > 200 else notes
+            notes_preview=notes,
         )
         return True
 
@@ -254,7 +291,7 @@ def create_release(repo: Repository, tag: str, notes: str, dry_run: bool) -> boo
             message=notes,
             draft=False,
             prerelease=False,
-            target_commitish=repo.default_branch
+            target_commitish=repo.default_branch,
         )
 
         log.info("created release", repo=repo.full_name, tag=tag)
@@ -273,12 +310,7 @@ def check_repo_for_release(repo: Repository, dry_run: bool) -> dict:
         dict with keys: checked, skipped, created, failed
     """
 
-    result = {
-        "checked": False,
-        "skipped": False,
-        "created": False,
-        "failed": False
-    }
+    result = {"checked": False, "skipped": False, "created": False, "failed": False}
 
     with log.context(repo=repo.full_name):
         log.debug("checking repository for release")
@@ -304,7 +336,9 @@ def check_repo_for_release(repo: Repository, dry_run: bool) -> dict:
             decision = should_create_release(repo)
 
             if decision.should_create:
-                success = create_release(repo, decision.suggested_version, decision.release_notes, dry_run)
+                success = create_release(
+                    repo, decision.suggested_version, decision.release_notes, dry_run
+                )
                 if success:
                     result["created"] = True
                 else:
@@ -312,10 +346,18 @@ def check_repo_for_release(repo: Repository, dry_run: bool) -> dict:
             else:
                 log.debug("no release needed")
         except GithubException as e:
-            log.error("GitHub API error", error=str(e), status=e.status if hasattr(e, 'status') else None)
+            log.error(
+                "GitHub API error",
+                error=str(e),
+                status=e.status if hasattr(e, "status") else None,
+            )
             result["failed"] = True
         except Exception as e:
-            log.error("unexpected error checking repository", error=str(e), error_type=type(e).__name__)
+            log.error(
+                "unexpected error checking repository",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             result["failed"] = True
 
     return result

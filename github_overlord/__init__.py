@@ -250,11 +250,18 @@ def keep_alive_prs(token, dry_run, repo):
     default=os.getenv("GITHUB_TOKEN"),
 )
 # TODO move this into the parent command
-@click.option("--dry-run", is_flag=True, help="Run script without merging PRs")
 @click.option(
-    "--only-unread", is_flag=True, help="Only process a single repository", default=True
+    "--dry-run",
+    is_flag=True,
+    help="Run script without marking notification as complete",
 )
-def notifications(token, dry_run, only_unread):
+@click.option(
+    "--all-notifications",
+    is_flag=True,
+    help="Don't limit notifications to unread",
+    default=False,
+)
+def notifications(token, dry_run, all_notifications):
     """
     Look at notifications and mark them as read if they are:
 
@@ -272,7 +279,7 @@ def notifications(token, dry_run, only_unread):
 
     # all includes read notifications AND done notifications :/
     # there is no way to determine if a notification is marked as done
-    notifications = list(user.get_notifications(all=not only_unread))
+    notifications = list(user.get_notifications(all=all_notifications))
 
     # TODO fix funcy_pipe here
     released_on_owned_repos = (
@@ -320,31 +327,43 @@ def notifications(token, dry_run, only_unread):
     log.info("marked owned closed PRs as done", count=len(owned_closed_pull_requests))
 
 
-@click.command()
+@click.command(name="generate-releases")
 @click.option("--dry-run", is_flag=True, help="Run script without creating releases")
 @click.option(
     "--topic",
     help="Only process repos with this topic (can also be set via RELEASE_CHECKER_TOPIC)",
     default=os.getenv("RELEASE_CHECKER_TOPIC"),
 )
-@click.option("--repo", help="Only process a single repository")
-def check_releases(dry_run, topic, repo):
+@click.option(
+    "--repo",
+    help="Only process a single repository (can also be set via RELEASE_CHECKER_REPO)",
+    default=os.getenv("RELEASE_CHECKER_REPO"),
+)
+def generate_releases(dry_run, topic, repo):
     """
     Check repositories for release readiness using LLM analysis and create releases when appropriate
     """
 
     token = os.getenv("GITHUB_TOKEN")
-    assert token, "GITHUB_TOKEN environment variable is required"
-    assert os.getenv("GOOGLE_API_KEY"), "GOOGLE_API_KEY environment variable is required"
+    if not token:
+        raise click.ClickException(
+            click.style("GITHUB_TOKEN environment variable is required", fg="red")
+        )
+
+    if not os.getenv("GOOGLE_API_KEY"):
+        raise click.ClickException(
+            click.style(
+                "GOOGLE_API_KEY environment variable is required to use generate-releases",
+                fg="red",
+            )
+        )
 
     log.info("checking repositories for release readiness")
-
-    g = Github(token)
-    user = g.get_user()
 
     repo = extract_repo_reference_from_github_url(repo)
 
     if repo:
+        g = Github(token)
         result = check_repo_for_release(g.get_repo(repo), dry_run)
         if result["created"]:
             log.info("Release check complete - created 1 release")
@@ -355,7 +374,13 @@ def check_releases(dry_run, topic, repo):
         return
 
     # Topic is required when not specifying a single repo
-    assert topic, "Topic is required when not specifying a single repository (use --topic or set RELEASE_CHECKER_TOPIC)"
+    if not topic:
+        raise click.UsageError(
+            "Topic is required when not specifying a single repository (use --topic or set RELEASE_CHECKER_TOPIC)"
+        )
+
+    g = Github(token)
+    user = g.get_user()
 
     log.info("filtering by topic", topic=topic)
 
@@ -400,7 +425,7 @@ def check_releases(dry_run, topic, repo):
 cli.add_command(dependabot)
 cli.add_command(keep_alive_prs)
 cli.add_command(notifications)
-cli.add_command(check_releases)
+cli.add_command(generate_releases)
 
 if __name__ == "__main__":
     cli()
