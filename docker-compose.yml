@@ -4,6 +4,8 @@ services:
     restart: always
     environment:
       - GITHUB_TOKEN=
+      # optional: minimum time between releases per repo (default: 2w)
+      # - RELEASE_CHECKER_MIN_GAP=2w
       # the container will *not* assume the TZ of the host without this
       # make sure your host has this set as well!
       - TZ=${TZ}

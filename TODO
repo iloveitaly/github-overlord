@@ -1,3 +1,4 @@
 github.GithubException.GithubException: 403 {"message": "refusing to allow a Personal Access Token to create or update workflow `.github/workflows/build_and_publish.yml` without `workflow` scope", "documentation_url": "https://docs.github.com/rest/pulls/pulls#merge-a-pull-request", "status": "403"}
 filter by last modified date, if it's 5+ years old, probably not worth it
 - [ ] https://github.com/raycast/extensions/pull/11505
+- [ ] TODO should also pull issues where I am the owner https://github.com/sourcegraph/cody/issues/5743 in the stale commenter
