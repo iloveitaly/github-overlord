@@ -147,9 +147,12 @@ def merge_dependabot_prs(token, dry_run, repo):
         return
 
     # if not, process everything!
-    user.get_repos(type="public") | fp.filter(
-        lambda repo: repo.owner.login == user.login
-    ) | fp.map(fp.rpartial(process_repo, dry_run)) | fp.to_list()
+    (
+        user.get_repos(type="public")
+        | fp.filter(lambda repo: repo.owner.login == user.login)
+        | fp.map(fp.rpartial(process_repo, dry_run))
+        | fp.to_list()
+    )
 
     log.info("dependabot pr check complete")
 
@@ -236,9 +239,13 @@ def keep_alive_prs(token, dry_run, repo):
         return repo.parent if repo.fork else repo
 
     # TODO this isn't perfect because you may be a contributor :/
-    user.get_repos(type="public") | fp.map(transform_forked_repos) | fp.filter(
-        lambda repo: repo.owner.login != login
-    ) | fp.map(fp.partial(inspect_repo_for_stale_prs, dry_run, login)) | fp.to_list()
+    (
+        user.get_repos(type="public")
+        | fp.map(transform_forked_repos)
+        | fp.filter(lambda repo: repo.owner.login != login)
+        | fp.map(fp.partial(inspect_repo_for_stale_prs, dry_run, login))
+        | fp.to_list()
+    )
 
     log.info("stale PR check complete")
 
@@ -285,8 +292,7 @@ def notifications(token, dry_run, all_notifications):
     released_on_owned_repos = (
         notifications
         | fp.filter(
-            lambda n: n.subject.type == "Release"
-            and n.repository.owner.login == login
+            lambda n: n.subject.type == "Release" and n.repository.owner.login == login
             # TODO I think there is a way to convert the instance method to a standard method so it could be mapped
             #      patchy had some code for this
         )
@@ -366,11 +372,11 @@ def generate_releases(dry_run, topic, repo):
         g = Github(token)
         result = check_repo_for_release(g.get_repo(repo), dry_run)
         if result["created"]:
-            log.info("Release check complete - created 1 release")
+            log.info("release check complete - created 1 release", dry_run=dry_run)
         elif result["failed"]:
-            log.info("Release check complete - failed to create release")
+            log.info("release check complete - failed to create release", dry_run=dry_run)
         else:
-            log.info("Release check complete - no release needed")
+            log.info("release check complete - no release needed", dry_run=dry_run)
         return
 
     # Topic is required when not specifying a single repo
@@ -389,8 +395,16 @@ def generate_releases(dry_run, topic, repo):
         lambda r: r.owner.login == user.login and not r.fork and topic in r.get_topics()
     )
 
+    def _check_repo_with_log(r):
+        log.info("checking repo for release", repo=r.full_name, dry_run=dry_run)
+        return check_repo_for_release(r, dry_run=dry_run)
+
     # Process each repo and collect results
-    results = repos | fp.map(fp.partial(check_repo_for_release, dry_run=dry_run)) | fp.to_list()
+    results = (
+        repos
+        | fp.map(_check_repo_with_log)
+        | fp.to_list()
+    )
 
     # Check if any repos were found
     if not results:
@@ -406,19 +420,20 @@ def generate_releases(dry_run, topic, repo):
     # Log summary
     if dry_run:
         log.info(
-            "DRY RUN: Release check complete",
+            "release check complete",
+            dry_run=True,
             checked=total_checked,
             would_create=total_created,
             skipped=total_skipped,
-            errors=total_failed
+            errors=total_failed,
         )
     else:
         log.info(
-            "Release check complete",
+            "release check complete",
             checked=total_checked,
             created=total_created,
             skipped=total_skipped,
-            failed=total_failed
+            failed=total_failed,
         )
 
 

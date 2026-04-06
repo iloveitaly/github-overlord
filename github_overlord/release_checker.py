@@ -6,7 +6,8 @@ calculates semantic version bumps, and generates formatted release notes.
 """
 
 import os
-from datetime import datetime, timezone
+import re
+from datetime import datetime, timedelta, timezone
 
 from github import GithubException
 from github.Repository import Repository
@@ -15,6 +16,63 @@ from pydantic_ai import Agent
 
 from github_overlord.config import JINJA_ENV
 from github_overlord.utils import log
+
+
+def _parse_duration_to_timedelta(value: str) -> timedelta:
+    """Parse a simple duration string into a timedelta.
+
+    Supported formats (case-insensitive):
+    - "2w", "14d", "48h", "30m", "10s"
+    - "week(s)", "day(s)", "hour(s)", "minute(s)", "second(s)"
+    - If unit is omitted, days are assumed (e.g. "14" -> 14 days)
+    """
+
+    normalized = value.strip().lower()
+    if not normalized:
+        raise ValueError("empty duration")
+
+    match = re.fullmatch(r"(\d+)\s*([a-z]*)", normalized)
+    if not match:
+        raise ValueError(f"invalid duration: {value!r}")
+
+    amount = int(match.group(1))
+    unit = match.group(2) or "d"
+
+    if unit in {"w", "week", "weeks"}:
+        return timedelta(weeks=amount)
+    if unit in {"d", "day", "days"}:
+        return timedelta(days=amount)
+    if unit in {"h", "hr", "hrs", "hour", "hours"}:
+        return timedelta(hours=amount)
+    if unit in {"m", "min", "mins", "minute", "minutes"}:
+        return timedelta(minutes=amount)
+    if unit in {"s", "sec", "secs", "second", "seconds"}:
+        return timedelta(seconds=amount)
+
+    raise ValueError(f"unsupported duration unit: {unit!r}")
+
+
+def _get_min_release_gap() -> timedelta:
+    raw = os.getenv("RELEASE_CHECKER_MIN_GAP", "2w")
+    try:
+        gap = _parse_duration_to_timedelta(raw)
+    except ValueError:
+        log.warning(
+            "invalid release_checker_min_gap; falling back to default",
+            value=raw,
+            default="2w",
+        )
+        gap = timedelta(weeks=2)
+
+    if gap.total_seconds() < 0:
+        log.warning(
+            "negative release_checker_min_gap; falling back to default",
+            value=raw,
+            default="2w",
+        )
+        return timedelta(weeks=2)
+
+    return gap
 
 
 class ReleaseAnalysis(BaseModel):
@@ -43,6 +101,8 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
         ReleaseDecision with should_create, suggested_version, and release_notes
     """
 
+    now = datetime.now(timezone.utc)
+
     # Get the last release
     releases = list(repo.get_releases())
 
@@ -51,6 +111,19 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
         baseline_date = last_release.created_at
         baseline_tag = last_release.tag_name
         log.debug("found last release", tag=baseline_tag, date=baseline_date)
+
+        min_gap = _get_min_release_gap()
+        time_since_release = now - baseline_date
+        if time_since_release < min_gap:
+            log.info(
+                "skipping release check due to minimum gap",
+                last_release=baseline_tag,
+                time_since_release_seconds=int(time_since_release.total_seconds()),
+                min_gap_seconds=int(min_gap.total_seconds()),
+            )
+            return ReleaseDecision(
+                should_create=False, suggested_version="", release_notes=""
+            )
     else:
         # No releases yet, use repo creation date
         baseline_date = repo.created_at
@@ -72,8 +145,8 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
             should_create=False, suggested_version="", release_notes=""
         )
 
-    # Limit to last 50 commits
-    commits = all_commits[:50]
+    # limit number of commits to analyze
+    commits = all_commits[:100]
 
     if not commits:
         log.info("no commits since last release", last_release=baseline_tag or "none")
@@ -87,7 +160,7 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
     commit_summary = format_commits_for_llm(commits)
 
     # Calculate days since last release
-    days_since_release = (datetime.now(timezone.utc) - baseline_date).days
+    days_since_release = (now - baseline_date).days
 
     # Call LLM to analyze
     analysis = analyze_commits_with_llm(
@@ -99,7 +172,7 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
     )
 
     if not analysis:
-        log.error("LLM analysis failed")
+        log.error("llm analysis failed")
         return ReleaseDecision(
             should_create=False, suggested_version="", release_notes=""
         )
@@ -115,7 +188,7 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
         )
 
         log.info(
-            "LLM recommends release",
+            "llm recommends release",
             decision=analysis.get("should_release"),
             confidence=analysis.get("confidence", 0),
             version=suggested_version,
@@ -130,7 +203,7 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
         )
 
     log.info(
-        "LLM does not recommend release",
+        "llm does not recommend release",
         decision=analysis.get("should_release", "no"),
         confidence=analysis.get("confidence", 0),
         reasoning=analysis.get("reasoning", ""),
@@ -167,7 +240,7 @@ def analyze_commits_with_llm(
 
     if not os.getenv("GOOGLE_API_KEY"):
         log.error(
-            "GOOGLE_API_KEY environment variable is not set; skipping LLM analysis"
+            "google_api_key environment variable is not set; skipping llm analysis"
         )
         return {}
 
@@ -201,7 +274,7 @@ def analyze_commits_with_llm(
         return result.output.model_dump()
 
     except Exception as e:
-        log.error("LLM API call failed", error=str(e))
+        log.error("llm api call failed", error=str(e))
         return {}
 
 
@@ -267,6 +340,9 @@ def generate_release_notes(
         changelog_url = f"https://github.com/{repo.full_name}/commits/{new_tag}"
 
     notes_parts.append(f"**Full Changelog**: {changelog_url}")
+    notes_parts.append(
+        "**Generated-by**: https://github.com/iloveitaly/github-overlord"
+    )
 
     return "\n".join(notes_parts)
 
@@ -347,7 +423,7 @@ def check_repo_for_release(repo: Repository, dry_run: bool) -> dict:
                 log.debug("no release needed")
         except GithubException as e:
             log.error(
-                "GitHub API error",
+                "github api error",
                 error=str(e),
                 status=e.status if hasattr(e, "status") else None,
             )
