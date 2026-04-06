@@ -3,6 +3,7 @@ This file should be imported first in any application entrypoint.
 """
 
 import logging
+import re
 import typing as t
 from pathlib import Path
 
@@ -68,6 +69,20 @@ def setup():
 
     # local state in a method is strange, but it works :/
     setup.complete = True
+
+
+def extract_repo_reference_from_github_url(url: str | None) -> str | None:
+    if url is None:
+        return None
+
+    if "github.com" not in url:
+        return url
+
+    match = re.search(r"github\.com/([^/]+)/([^/]+)", url)
+    if match is None:
+        return url
+
+    return f"{match.group(1)}/{match.group(2)}"
 
 
 # side effects are bad, but it's fun to do bad things
