@@ -1,4 +1,4 @@
-****# GitHub Overlord
+# GitHub Overlord
 
 [![Release Notes](https://img.shields.io/github/release/iloveitaly/github-overlord)](https://github.com/iloveitaly/github-overlord/releases) [![Downloads](https://static.pepy.tech/badge/github-overlord/month)](https://pepy.tech/project/github-overlord) [![Python Versions](https://img.shields.io/pypi/pyversions/github-overlord)](https://pypi.org/project/github-overlord) ![GitHub CI Status](https://github.com/iloveitaly/github-overlord/actions/workflows/build_and_publish.yml/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -6,7 +6,7 @@ GitHub Overlord is a Python script that does a couple things to help manage open
 
 * Automatically merges Dependabot PRs in public repositories that have passed CI checks.
 * Comment on PRs that are going to automatically be marked as stale
-* Removes notifications from dependabot and releases on your own projects
+* Removes notifications from bot-authored PRs, Release Please PRs, and releases on repos you control
 * Automatically creates releases for repositories based on LLM analysis of recent commits
 
 This simple project has also given me the chance to iterate on my [nixpacks github actions project](https://github.com/iloveitaly/github-action-nixpacks).
