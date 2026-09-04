@@ -114,6 +114,6 @@ Author: {comment.user.login}
 
     # TODO got to be a helper for this instead
     message = response.choices[0].message
-    response_dict = json.loads(message.content)
+    response_dict = json.loads(message.content or "{}")
 
     return (response_dict["stale"] == "yes", response_dict.get("comment"))

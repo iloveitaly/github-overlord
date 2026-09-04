@@ -1,4 +1,5 @@
 """Configuration for github-overlord."""
+
 from pathlib import Path
 
 import jinja2
@@ -16,5 +17,5 @@ JINJA_ENV = jinja2.Environment(
     loader=jinja2.FileSystemLoader(searchpath=str(DATA_DIRECTORY)),
     autoescape=False,  # No HTML escaping needed for prompts
     trim_blocks=True,
-    lstrip_blocks=True
+    lstrip_blocks=True,
 )

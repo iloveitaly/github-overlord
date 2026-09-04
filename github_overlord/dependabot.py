@@ -71,12 +71,15 @@ async def parse(
     group_match = re.search(group_re, commitMessage, re.MULTILINE)
 
     new_maintainer = bool(re.search(r"Maintainer changes", body, re.MULTILINE))
-    lookup_fn = (
-        lookup
-        if lookup
-        else (lambda *args: _empty_dependency_alert())
-    )
-    score_fn = getScore if getScore else (lambda *args: 0)
+
+    async def _default_lookup(*_args) -> DependencyAlert:
+        return _empty_dependency_alert()
+
+    async def _default_score(*_args) -> float:
+        return 0.0
+
+    lookup_fn = lookup if lookup else _default_lookup
+    score_fn = getScore if getScore else _default_score
 
     if not yaml_match or not branchName.startswith("dependabot"):
         return []
@@ -100,7 +103,7 @@ async def parse(
         return []
 
     async def create_dependency(dependency: dict[str, str], index: int):
-        dirname = f"/{'/'.join(chunks[2:-1 * (1 + dependency['dependency-name'].count('/'))]) or ''}"
+        dirname = f"/{'/'.join(chunks[2 : -1 * (1 + dependency['dependency-name'].count('/'))]) or ''}"
         last_version = prev if index == 0 else ""
         next_version = next if index == 0 else ""
         update_type = dependency.get(
@@ -123,7 +126,8 @@ async def parse(
             ),
             maintainerChanges=new_maintainer,
             dependencyGroup=dependency_group,
-            **await lookup_fn(dependency["dependency-name"], last_version, dirname),
+            # TypedDict kwargs unpacking requires type ignore in pyright
+            **await lookup_fn(dependency["dependency-name"], last_version, dirname),  # type: ignore
         )
 
     return [
@@ -246,7 +250,7 @@ def is_eligible_for_merge(pr: PullRequest) -> bool:
     all_checks_successful = (
         last_commit.get_check_runs()
         | fp.pluck_attr("conclusion")
-        | fp.all({"success", "skipped"})
+        | fp.all({"success", "skipped"})  # type: ignore # funcy treats set as predicate
     )
 
     if not all_checks_successful:
@@ -257,7 +261,8 @@ def is_eligible_for_merge(pr: PullRequest) -> bool:
 
 
 def process_repo(repo, dry_run: bool) -> None:
-    with log.context(repo=repo.full_name):
+    # log.context is dynamic attribute monkey patched in utils.py
+    with log.context(repo=repo.full_name):  # type: ignore
         log.debug("checking repository")
 
         if repo.fork:
@@ -297,7 +302,7 @@ def merge_dependabot_prs(token: str, dry_run: bool, repo: str | None) -> None:
         process_repo(github.get_repo(repo), dry_run)
         return
 
-    (
+    _ = (
         user.get_repos(type="public")
         | fp.filter(lambda current_repo: current_repo.owner.login == user.login)
         | fp.map(fp.rpartial(process_repo, dry_run))

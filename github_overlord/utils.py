@@ -14,12 +14,10 @@ root: Path
 
 # must type manually, unfortunately :/
 # https://www.structlog.org/en/21.3.0/types.html
-log: structlog.stdlib.BoundLogger
+log: structlog.stdlib.BoundLogger = structlog.get_logger()
 
 
 def configure_logger():
-    global log
-
     # context manager to auto-clear context
     log.context = structlog.contextvars.bound_contextvars  # type: ignore
     # set thread-local context
@@ -31,7 +29,7 @@ def configure_logger():
 
     # allow user to specify a log in case they want to do something meaningful with the stdout
     if python_log_path := config("PYTHON_LOG_PATH", default=None):
-        python_log = open(
+        python_log = open(  # noqa: SIM115
             python_log_path, "a", encoding="utf-8"
         )  # pylint: disable=consider-using-with
         logger_factory = structlog.PrintLoggerFactory(file=python_log)
@@ -55,7 +53,7 @@ def configure_logger():
 
 
 def setup():
-    if hasattr(setup, "complete") and setup.complete:
+    if hasattr(setup, "complete") and setup.complete:  # type: ignore # function attribute caching
         return
 
     global root, log
@@ -68,7 +66,7 @@ def setup():
     log.debug("application setup")
 
     # local state in a method is strange, but it works :/
-    setup.complete = True
+    setup.complete = True  # type: ignore # function attribute caching
 
 
 def extract_repo_reference_from_github_url(url: str | None) -> str | None:

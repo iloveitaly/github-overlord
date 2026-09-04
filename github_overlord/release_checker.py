@@ -273,7 +273,7 @@ def analyze_commits_with_llm(
         # pydantic-ai v1.38+: structured output is returned on `result.output`.
         return result.output.model_dump()
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log.error("llm api call failed", error=str(e))
         return {}
 
@@ -388,7 +388,8 @@ def check_repo_for_release(repo: Repository, dry_run: bool) -> dict:
 
     result = {"checked": False, "skipped": False, "created": False, "failed": False}
 
-    with log.context(repo=repo.full_name):
+    # log.context is dynamic attribute monkey patched in utils.py
+    with log.context(repo=repo.full_name):  # type: ignore
         log.debug("checking repository for release")
 
         # Skip archived repos
@@ -403,7 +404,7 @@ def check_repo_for_release(repo: Repository, dry_run: bool) -> dict:
                 log.debug("skipping empty repo")
                 result["skipped"] = True
                 return result
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass  # If we can't determine size, continue anyway
 
         result["checked"] = True
@@ -428,7 +429,7 @@ def check_repo_for_release(repo: Repository, dry_run: bool) -> dict:
                 status=e.status if hasattr(e, "status") else None,
             )
             result["failed"] = True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             log.error(
                 "unexpected error checking repository",
                 error=str(e),

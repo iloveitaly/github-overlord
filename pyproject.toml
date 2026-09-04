@@ -47,7 +47,7 @@ dev = [
 ]
 
 [tool.pyright]
-exclude = ["examples/", "playground/", "tmp/", ".venv/", "tests/"]
+exclude = ["examples/", "playground/", "playground.py", "tmp/", ".venv/", "tests/"]
 
 [tool.pytest.ini_options]
 addopts = "--cov --cov-report=term-missing --cov-report=html:tmp/htmlcov"
