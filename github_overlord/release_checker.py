@@ -7,7 +7,7 @@ calculates semantic version bumps, and generates formatted release notes.
 
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from github import GithubException
 from github.Repository import Repository
@@ -101,7 +101,7 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
         ReleaseDecision with should_create, suggested_version, and release_notes
     """
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Get the last release
     releases = list(repo.get_releases())

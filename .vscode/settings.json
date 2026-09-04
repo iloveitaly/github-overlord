@@ -1,7 +1,9 @@
 {
   "[python]": {
     "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
       "source.organizeImports": "explicit"
     },
     "editor.tabSize": 4
@@ -16,8 +18,20 @@
   "python.analysis.indexing": true,
   "python.analysis.autoImportCompletions": true,
 
-  "flake8.importStrategy": "fromEnvironment",
+  "python.analysis.packageIndexDepths": [
+    {
+      "name": "",
+      "depth": 3,
+      "includeAllSymbols": true
+    }
+  ],
 
+  "cSpell.words": ["openai", "httpx"],
   "cSpell.enableFiletypes": ["jinja-html"],
-  "black-formatter.importStrategy": "fromEnvironment"
+
+  "files.exclude": {
+    ".ruff_cache": true,
+    ".pytest_cache": true,
+    ".venv": true
+  }
 }

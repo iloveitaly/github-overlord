@@ -1,0 +1,12 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: HEAD
+_src_path: https://github.com/iloveitaly/python-package-template
+add_llm_rules: true
+build_workflow: release_please
+email: mike@mikebian.co
+full_name: Michael Bianco
+github_username: iloveitaly
+include_postgres: false
+is_cli_tool: true
+project_name: github-overlord
+publish_docker_image: true

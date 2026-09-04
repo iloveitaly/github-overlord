@@ -8,20 +8,20 @@ from github.Notification import Notification
 import github_overlord.patch as _
 
 from .dependabot import dependabot
-
 from .release_checker import check_repo_for_release
 from .stale_commenter import inspect_repo_for_stale_prs
 from .utils import extract_repo_reference_from_github_url, log
+from .version import __version__
 
 
 @click.group()
+@click.version_option(version=__version__)
 def cli():
     """
     GitHub Overlord is a tool to help manage annoying tasks across your GitHub repositories. Some of this could be done
     by GitHub Actions, but this eliminates the need to carefully configure GH actions for each repo.
     """
 
-    pass
 
 
 @click.command()

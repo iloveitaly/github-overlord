@@ -1,7 +1,7 @@
 import os
 import re
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable
 from types import NoneType
 from typing import Protocol, TypedDict
 

@@ -1,7 +1,6 @@
 import json
 
 import funcy_pipe as fp
-from github import Github
 from github.IssueComment import IssueComment
 from github.PullRequest import PullRequest
 from github.Repository import Repository

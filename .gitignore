@@ -1,6 +1,35 @@
-.mypy_cache
-.venv
-__pycache__
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Unit test / coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.ruff_cache/
+
+# Environments
+.env
+.venv/
+.ipython_history
+
+# mypy
+.mypy_cache/
+
+# AI settings
+.cursor/settings.local.json
+.claude/settings.local.json
+!/.cursor/environment.json
+
+# Local temporary files
+tmp/
 
 # START AI INSTRUCTION IGNORES
 /.claude/commands/standalone-python-scripts.md
