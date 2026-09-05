@@ -12,6 +12,7 @@ from github import Github
 from github.GithubException import GithubException
 from github.GithubObject import NotSet
 from github.PullRequest import PullRequest
+from pydantic import BaseModel
 
 from .utils import extract_repo_reference_from_github_url, log
 
@@ -260,56 +261,107 @@ def is_eligible_for_merge(pr: PullRequest) -> bool:
     return True
 
 
-def process_repo(repo, dry_run: bool) -> None:
+class RepoDependabotResult(BaseModel):
+    checked: int = 0
+    merged: int = 0
+    failed: int = 0
+
+
+def process_repo(repo, dry_run: bool) -> RepoDependabotResult:
     # log.context is dynamic attribute monkey patched in utils.py
     with log.context(repo=repo.full_name):  # type: ignore
         log.debug("checking repository")
 
         if repo.fork:
             log.debug("skipping forked repo")
-            return
+            return RepoDependabotResult()
 
         pulls = repo.get_pulls(state="open")
 
         if pulls.totalCount == 0 or pulls == NoneType:
             log.debug("no open prs, skipping")
-            return
+            return RepoDependabotResult()
 
+        checked_count = 0
         merged_pr_count = 0
+        failed_pr_count = 0
 
         for pr in pulls:
+            checked_count += 1
             if is_eligible_for_merge(pr):
                 if merge_pr(pr, dry_run):
                     merged_pr_count += 1
+                else:
+                    failed_pr_count += 1
                 continue
 
             log.debug("skipping PR", url=pr.html_url)
 
         if merged_pr_count == 0:
             log.debug("no PRs were merged")
-            return
+            return RepoDependabotResult(checked=checked_count, failed=failed_pr_count)
 
-        log.info("merged prs", count=merged_pr_count)
+        if dry_run:
+            log.info("would merge prs", count=merged_pr_count)
+        else:
+            log.info("merged prs", count=merged_pr_count)
+
+        return RepoDependabotResult(
+            checked=checked_count,
+            merged=merged_pr_count,
+            failed=failed_pr_count,
+        )
 
 
-def merge_dependabot_prs(token: str, dry_run: bool, repo: str | None) -> None:
+def merge_dependabot_prs(
+    token: str, dry_run: bool, repo: str | None
+) -> RepoDependabotResult:
     assert token, "GitHub token is required"
 
     github = Github(token)
     user = github.get_user()
 
     if repo:
-        process_repo(github.get_repo(repo), dry_run)
-        return
+        results = [process_repo(github.get_repo(repo), dry_run)]
+    else:
+        results = (
+            user.get_repos(type="public")
+            | fp.filter(lambda current_repo: current_repo.owner.login == user.login)
+            | fp.map(fp.rpartial(process_repo, dry_run))
+            | fp.to_list()
+        )
 
-    _ = (
-        user.get_repos(type="public")
-        | fp.filter(lambda current_repo: current_repo.owner.login == user.login)
-        | fp.map(fp.rpartial(process_repo, dry_run))
-        | fp.to_list()
+    total_checked = sum(r.checked for r in results)
+    total_merged = sum(r.merged for r in results)
+    total_failed = sum(r.failed for r in results)
+
+    if dry_run:
+        log.info(
+            "dependabot pr check complete",
+            dry_run=True,
+            repos_checked=len(results),
+            prs_checked=total_checked,
+            would_merge=total_merged,
+            failed=total_failed,
+        )
+        return RepoDependabotResult(
+            checked=total_checked,
+            merged=total_merged,
+            failed=total_failed,
+        )
+
+    log.info(
+        "dependabot pr check complete",
+        repos_checked=len(results),
+        prs_checked=total_checked,
+        merged=total_merged,
+        failed=total_failed,
     )
-
-    log.info("dependabot pr check complete")
+    return RepoDependabotResult(
+        checked=total_checked,
+        merged=total_merged,
+        failed=total_failed,
+    )
 
 
 @click.command()
