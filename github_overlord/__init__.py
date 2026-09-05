@@ -6,6 +6,7 @@ from github import Github
 
 import github_overlord.patch  # noqa: F401
 
+from .ai import get_expected_ai_key_var, is_ai_key_configured
 from .dependabot import dependabot
 from .notifications import notifications
 from .release_checker import check_repo_for_release
@@ -37,8 +38,19 @@ def keep_alive_prs(token, dry_run, repo):
     Detect when a bot is about to close a PR for no good reason and make a comment to keep it alive
     """
 
-    assert token, "GitHub token is required"
-    # TODO should assert on openai setup
+    if not token:
+        raise click.ClickException(
+            click.style("GITHUB_TOKEN environment variable is required", fg="red")
+        )
+
+    if not is_ai_key_configured():
+        expected_var = get_expected_ai_key_var()
+        raise click.ClickException(
+            click.style(
+                f"{expected_var} (or GITHUB_OVERLORD_AI_KEY) environment variable is required to run keep-alive-prs",
+                fg="red",
+            )
+        )
 
     log.info("checking for stale PRs")
 
@@ -90,10 +102,11 @@ def generate_releases(dry_run, topic, repo):
             click.style("GITHUB_TOKEN environment variable is required", fg="red")
         )
 
-    if not os.getenv("GOOGLE_API_KEY"):
+    if not is_ai_key_configured():
+        expected_var = get_expected_ai_key_var()
         raise click.ClickException(
             click.style(
-                "GOOGLE_API_KEY environment variable is required to use generate-releases",
+                f"{expected_var} (or GITHUB_OVERLORD_AI_KEY) environment variable is required to use generate-releases",
                 fg="red",
             )
         )
