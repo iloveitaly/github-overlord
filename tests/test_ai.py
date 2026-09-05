@@ -104,21 +104,27 @@ def test_is_stale_comment():
         assert comment == "Friendly reminder!"
 
 
-def test_inspect_repo_for_stale_prs_handles_github_exception():
-    from github.GithubException import UnknownObjectException
+def test_is_stale_comment_with_pr_title():
+    mock_comment = MagicMock()
+    mock_comment.user.login = "github-actions[bot]"
+    mock_comment.body = "Marked as stale. Will be closed in 7 days."
 
-    from github_overlord.stale_commenter import inspect_repo_for_stale_prs
+    with patch("github_overlord.stale_commenter.get_agent") as mock_get_agent:
+        mock_agent_instance = MagicMock()
+        mock_output = MagicMock()
+        mock_output.stale = True
+        mock_output.comment = "Friendly reminder regarding this fix!"
+        mock_result = MagicMock(output=mock_output)
+        mock_agent_instance.run_sync.return_value = mock_result
+        mock_get_agent.return_value = mock_agent_instance
 
-    mock_repo = MagicMock()
-    mock_repo.full_name = "Codeinwp/Nivo-Slider-jQuery"
-    mock_repo.get_pulls.side_effect = UnknownObjectException(
-        status=404, data={"message": "Not Found"}
-    )
-
-    result = inspect_repo_for_stale_prs(
-        dry_run=True, login="iloveitaly", repo=mock_repo
-    )
-    assert result == []
+        is_stale, comment = is_stale_comment(
+            mock_comment, pr_title="fix: resolve memory leak"
+        )
+        assert is_stale is True
+        assert comment == "Friendly reminder regarding this fix!"
+        prompt_arg = mock_agent_instance.run_sync.call_args[0][0]
+        assert "Pull Request Title: fix: resolve memory leak" in prompt_arg
 
 
 def test_check_for_stale_comments_handles_github_exception():
@@ -150,6 +156,28 @@ def test_check_for_stale_comments_skips_zero_comments():
     mock_pr.get_comments.assert_not_called()
 
 
+def test_check_for_stale_comments_skips_when_user_already_replied():
+    from github_overlord.stale_commenter import check_for_stale_comments
+
+    mock_pr = MagicMock()
+    mock_pr.comments = 2
+    mock_pr.as_issue.return_value = mock_pr
+
+    bot_comment = MagicMock()
+    bot_comment.user.login = "github-actions[bot]"
+    bot_comment.body = "Stale warning"
+
+    user_comment = MagicMock()
+    user_comment.user.login = "testuser"
+    user_comment.body = "Friendly reminder, still working on this"
+
+    # Comments in chronological order: bot warned, then user replied
+    mock_pr.get_comments.return_value = [bot_comment, user_comment]
+
+    result = check_for_stale_comments(dry_run=True, pr=mock_pr, login="testuser")
+    assert result is False
+
+
 def test_inspect_stale_prs_search_query_without_repo():
     from github_overlord.stale_commenter import inspect_stale_prs
 
@@ -162,7 +190,7 @@ def test_inspect_stale_prs_search_query_without_repo():
         github=mock_github, login="testuser", dry_run=True, repo=None
     )
     mock_github.search_issues.assert_called_once_with(
-        "is:pr is:open author:testuser -user:testuser"
+        "is:pr is:open author:testuser -user:testuser draft:false"
     )
     assert result.checked == 1
     assert result.inspected == 1
@@ -181,7 +209,7 @@ def test_inspect_stale_prs_search_query_with_repo():
         github=mock_github, login="testuser", dry_run=True, repo="owner/repo"
     )
     mock_github.search_issues.assert_called_once_with(
-        "is:pr is:open author:testuser repo:owner/repo"
+        "is:pr is:open author:testuser repo:owner/repo draft:false"
     )
     assert result.checked == 0
     assert result.inspected == 0
