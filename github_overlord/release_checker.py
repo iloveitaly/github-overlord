@@ -12,8 +12,8 @@ from datetime import UTC, datetime, timedelta
 from github import GithubException
 from github.Repository import Repository
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent
 
+from github_overlord.ai import get_agent, run_agent_sync
 from github_overlord.config import JINJA_ENV
 from github_overlord.utils import log
 
@@ -260,17 +260,8 @@ def analyze_commits_with_llm(
     )
 
     try:
-        # Create agent with structured output
-        # Using gemini-flash which points to latest flash model
-        agent = Agent(
-            # https://ai.google.dev/api/models?referrer=grok.com
-            "google-gla:models/gemini-3-flash-preview",
-            output_type=ReleaseAnalysis,
-        )
-
-        result = agent.run_sync(prompt)
-
-        # pydantic-ai v1.38+: structured output is returned on `result.output`.
+        agent = get_agent(output_type=ReleaseAnalysis)
+        result = run_agent_sync(agent, prompt)
         return result.output.model_dump()
 
     except Exception as e:  # noqa: BLE001
