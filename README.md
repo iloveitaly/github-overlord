@@ -6,7 +6,7 @@ GitHub Overlord is a Python script that does a couple things to help manage open
 
 * Automatically merges Dependabot PRs in public repositories that have passed CI checks.
 * Comment on PRs that are going to automatically be marked as stale
-* Removes notifications from bot-authored PRs, Release Please PRs, and releases on repos you control
+* Removes notifications from bot-authored PRs, Release Please PRs, self-authored PR creations without external activity, and releases on repos you control
 * Automatically creates releases for repositories based on LLM analysis of recent commits
 
 This simple project has also given me the chance to iterate on my [nixpacks github actions project](https://github.com/iloveitaly/github-action-nixpacks).
@@ -34,7 +34,7 @@ Commands:
 
 ### Automatic Release Creation
 
-The `generate-releases` command uses LLM analysis (via [Pydantic AI](https://ai.pydantic.dev/) with Google Gemini) to determine when repositories are ready for a new release. Pydantic AI makes it easy to swap between different LLM providers if needed.
+The `generate-releases` command uses LLM analysis (via [Pydantic AI](https://ai.pydantic.dev/)) to determine when repositories are ready for a new release. Both `generate-releases` and `keep-alive-prs` share the same unified AI model configuration (defaulting to Google Gemini `gemini-3.8-flash`).
 
 This is particularly useful for template repositories, starter projects, etc that don't have automated release workflows and aren't versioned for whatever reason.
 
@@ -53,10 +53,11 @@ github-overlord generate-releases --repo owner/repo-name
 github-overlord generate-releases --topic auto-release --dry-run
 ```
 
-**Requirements:**
+**Requirements & Configuration:**
 
 * `GITHUB_TOKEN` - GitHub token with repo write permissions
-* `GOOGLE_API_KEY` - Google API key ([Get a free API key](https://ai.google.dev/))
+* `GITHUB_OVERLORD_AI_KEY` - API key for the AI provider (or provider-specific `GOOGLE_API_KEY`, `OPENAI_API_KEY`, etc.)
+* `GITHUB_OVERLORD_MODEL` - (Optional) AI model override (e.g. `gemini-3.8-flash`, `openai:gpt-4o`). Defaults to `gemini-3.8-flash`.
 * `--topic` flag or `RELEASE_CHECKER_TOPIC` - Topic to filter repositories (required unless using `--repo`)
 * `--repo` flag or `RELEASE_CHECKER_REPO` - Single repository to process (useful for testing)
 * `RELEASE_CHECKER_MIN_GAP` - Minimum time between releases for the same repo (defaults to `2w`, e.g. `14d`, `48h`)
@@ -65,7 +66,7 @@ github-overlord generate-releases --topic auto-release --dry-run
 
 1. Finds repositories matching the specified topic
 2. For each repo, gets commits since the last release (or since repo creation if no releases)
-3. Analyzes up to the last 50 commits using Gemini 2.0 Flash to determine if a release is warranted
+3. Analyzes up to the last 50 commits using the configured AI model (defaulting to `gemini-3.8-flash`) to determine if a release is warranted
 4. If the LLM recommends a release, automatically creates one with:
 
     * Auto-incremented semantic version (patch/minor/major based on changes)
@@ -82,7 +83,7 @@ export RELEASE_CHECKER_TOPIC="template"
 # Or, to test a single repo on the schedule:
 # export RELEASE_CHECKER_REPO="owner/repo-name"
 export GITHUB_TOKEN="your-token"
-export GOOGLE_API_KEY="your-api-key"
+export GITHUB_OVERLORD_AI_KEY="your-api-key"
 
 # All CLI commands will run on this schedule
 python main.py
@@ -91,7 +92,7 @@ python main.py
 **Troubleshooting:**
 
 * **"No repositories found with topic"**: Make sure your repos have the correct topic tag in GitHub settings
-* **"GOOGLE_API_KEY environment variable is required"**: Get a free API key from [ai.google.dev](https://ai.google.dev/)
+* **"API key environment variable is required"**: Set `GITHUB_OVERLORD_AI_KEY` (or `GOOGLE_API_KEY` for the default Gemini model). Get a free Gemini API key from [ai.google.dev](https://ai.google.dev/)
 * **Rate limiting**: The free tier has limits (15-60 requests/minute). Consider adding delays between repos if needed
 * **"Failed to create release"**: Ensure `GITHUB_TOKEN` has `repo` scope permissions
 
