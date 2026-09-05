@@ -7,6 +7,7 @@ setup:
     [ -f .env ] || cp .env-example .env
     [ -d .venv ] || uv venv
     uv sync
+    uv run beautiful-traceback
     @echo "activate: source ./.venv/bin/activate"
 
 # Start docker services
