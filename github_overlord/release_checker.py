@@ -13,7 +13,11 @@ from github import GithubException
 from github.Repository import Repository
 from pydantic import BaseModel, Field
 
-from github_overlord.ai import get_agent
+from github_overlord.ai import (
+    get_agent,
+    get_expected_ai_key_var,
+    is_ai_key_configured,
+)
 from github_overlord.config import JINJA_ENV
 from github_overlord.utils import log
 
@@ -177,11 +181,11 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
             should_create=False, suggested_version="", release_notes=""
         )
 
-    should_release = analysis.get("should_release", "no") in ["yes", "maybe"]
+    should_release = analysis.should_release.lower() in ["yes", "maybe"]
 
     if should_release:
         suggested_version = calculate_next_version(
-            baseline_tag, analysis.get("suggested_version_bump", "patch")
+            baseline_tag, analysis.suggested_version_bump
         )
         release_notes = generate_release_notes(
             repo, baseline_tag, suggested_version, analysis
@@ -189,11 +193,11 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
 
         log.info(
             "llm recommends release",
-            decision=analysis.get("should_release"),
-            confidence=analysis.get("confidence", 0),
+            decision=analysis.should_release,
+            confidence=analysis.confidence,
             version=suggested_version,
-            bump=analysis.get("suggested_version_bump", "patch"),
-            reasoning=analysis.get("reasoning", ""),
+            bump=analysis.suggested_version_bump,
+            reasoning=analysis.reasoning,
         )
 
         return ReleaseDecision(
@@ -204,9 +208,9 @@ def should_create_release(repo: Repository) -> ReleaseDecision:
 
     log.info(
         "llm does not recommend release",
-        decision=analysis.get("should_release", "no"),
-        confidence=analysis.get("confidence", 0),
-        reasoning=analysis.get("reasoning", ""),
+        decision=analysis.should_release,
+        confidence=analysis.confidence,
+        reasoning=analysis.reasoning,
     )
     return ReleaseDecision(should_create=False, suggested_version="", release_notes="")
 
@@ -235,14 +239,15 @@ def analyze_commits_with_llm(
     commit_count: int,
     days_since_release: int,
     last_tag: str | None,
-) -> dict:
-    """Use Gemini via Pydantic AI to analyze commits and determine if a release should be created."""
+) -> ReleaseAnalysis | None:
+    """Use LLM via Pydantic AI to analyze commits and determine if a release should be created."""
 
-    if not os.getenv("GOOGLE_API_KEY"):
+    if not is_ai_key_configured():
+        expected_var = get_expected_ai_key_var()
         log.error(
-            "google_api_key environment variable is not set; skipping llm analysis"
+            f"{expected_var} environment variable is not set; skipping llm analysis"
         )
-        return {}
+        return None
 
     template = JINJA_ENV.get_template("release_analysis_prompt.j2")
 
@@ -262,11 +267,11 @@ def analyze_commits_with_llm(
     try:
         agent = get_agent(output_type=ReleaseAnalysis)
         result = agent.run_sync(prompt)
-        return result.output.model_dump()
+        return result.output
 
     except Exception as e:  # noqa: BLE001
         log.error("llm api call failed", error=str(e))
-        return {}
+        return None
 
 
 def calculate_next_version(current_tag: str | None, bump_type: str) -> str:
@@ -303,12 +308,15 @@ def calculate_next_version(current_tag: str | None, bump_type: str) -> str:
 
 
 def generate_release_notes(
-    repo: Repository, baseline_tag: str | None, new_tag: str, analysis: dict
+    repo: Repository,
+    baseline_tag: str | None,
+    new_tag: str,
+    analysis: ReleaseAnalysis,
 ) -> str:
     """Generate release notes from LLM analysis and add changelog link."""
 
     # Get the markdown changelog from LLM
-    llm_changelog = analysis.get("release_notes", "").strip()
+    llm_changelog = analysis.release_notes.strip()
 
     # Build the full release notes
     notes_parts = []

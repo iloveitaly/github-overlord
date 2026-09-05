@@ -15,6 +15,17 @@ from .utils import extract_repo_reference_from_github_url, log
 from .version import __version__
 
 
+def _ensure_ai_key_configured(command_action: str) -> None:
+    if not is_ai_key_configured():
+        expected_var = get_expected_ai_key_var()
+        raise click.ClickException(
+            click.style(
+                f"{expected_var} (or GITHUB_OVERLORD_AI_KEY) environment variable is required to {command_action}",
+                fg="red",
+            )
+        )
+
+
 @click.group()
 @click.version_option(version=__version__)
 def cli():
@@ -43,14 +54,7 @@ def keep_alive_prs(token, dry_run, repo):
             click.style("GITHUB_TOKEN environment variable is required", fg="red")
         )
 
-    if not is_ai_key_configured():
-        expected_var = get_expected_ai_key_var()
-        raise click.ClickException(
-            click.style(
-                f"{expected_var} (or GITHUB_OVERLORD_AI_KEY) environment variable is required to run keep-alive-prs",
-                fg="red",
-            )
-        )
+    _ensure_ai_key_configured("run keep-alive-prs")
 
     log.info("checking for stale PRs")
 
@@ -102,14 +106,7 @@ def generate_releases(dry_run, topic, repo):
             click.style("GITHUB_TOKEN environment variable is required", fg="red")
         )
 
-    if not is_ai_key_configured():
-        expected_var = get_expected_ai_key_var()
-        raise click.ClickException(
-            click.style(
-                f"{expected_var} (or GITHUB_OVERLORD_AI_KEY) environment variable is required to use generate-releases",
-                fg="red",
-            )
-        )
+    _ensure_ai_key_configured("use generate-releases")
 
     log.info("checking repositories for release readiness")
 
