@@ -3,8 +3,21 @@
 import hashlib
 import inspect
 
+from github.Issue import Issue
 from github.Notification import Notification
 from github.PullRequest import PullRequest
+from github.PullRequestReview import PullRequestReview
+
+_PULL_REQUEST_CACHE: dict[str, PullRequest] = {}
+_REVIEWS_CACHE: dict[str, list[PullRequestReview]] = {}
+_ISSUE_CACHE: dict[str, Issue] = {}
+
+
+def clear_cache() -> None:
+    """Clear all monkey-patch caches."""
+    _PULL_REQUEST_CACHE.clear()
+    _REVIEWS_CACHE.clear()
+    _ISSUE_CACHE.clear()
 
 
 def hash_function_code(func) -> str:
@@ -41,20 +54,26 @@ assert (
 _orig_get_pull_request = Notification.get_pull_request
 
 
-def get_pull_request(self):
-    """Memoize get_pull_request to avoid redundant GitHub API calls.
+def get_pull_request(self) -> PullRequest:
+    """Memoize get_pull_request by subject URL to avoid redundant GitHub API calls.
 
     PyGithub's default implementation makes a fresh HTTP GET request each time
     get_pull_request() is called. Because notification cleanup executes multiple
-    filter passes over the same notifications, caching on the instance avoids
-    redundant network round-trips and prevents rate limit exhaustion.
+    filter passes over the same notifications, caching by PR URL avoids
+    redundant network round-trips and prevents rate limit exhaustion across instances.
     """
+    url = getattr(getattr(self, "subject", None), "url", None)
+    if url:
+        if url not in _PULL_REQUEST_CACHE:
+            _PULL_REQUEST_CACHE[url] = _orig_get_pull_request(self)
+        return _PULL_REQUEST_CACHE[url]
+
     if not hasattr(self, "_cached_pull_request"):
         self._cached_pull_request = _orig_get_pull_request(self)
     return self._cached_pull_request
 
 
-Notification.get_pull_request = get_pull_request
+Notification.get_pull_request = get_pull_request  # type: ignore[assignment]
 
 # Verify PyGithub's get_reviews implementation has not changed before memoizing
 assert (
@@ -65,13 +84,19 @@ assert (
 _orig_get_reviews = PullRequest.get_reviews
 
 
-def get_reviews(self):
-    """Memoize get_reviews to avoid redundant GitHub API calls.
+def get_reviews(self) -> list[PullRequestReview]:
+    """Memoize get_reviews by PR URL to avoid redundant GitHub API calls.
 
     PyGithub's get_reviews() creates a new PaginatedList each time it is called,
     refetching all reviews from GitHub on every iteration. Caching the review list
-    on the PullRequest instance prevents redundant API calls across filter passes.
+    by PR URL prevents redundant API calls across filter passes and different instances.
     """
+    url = getattr(self, "url", None)
+    if url:
+        if url not in _REVIEWS_CACHE:
+            _REVIEWS_CACHE[url] = list(_orig_get_reviews(self))
+        return _REVIEWS_CACHE[url]
+
     if not hasattr(self, "_cached_reviews"):
         self._cached_reviews = list(_orig_get_reviews(self))
     return self._cached_reviews
@@ -88,12 +113,19 @@ assert (
 _orig_as_issue = PullRequest.as_issue
 
 
-def as_issue(self):
-    """Memoize as_issue to avoid redundant GitHub API calls.
+def as_issue(self) -> Issue:
+    """Memoize as_issue by issue URL to avoid redundant GitHub API calls.
 
-    PyGithub's as_issue() creates a new Issue instance each time it is called.
-    Caching the Issue instance on the PullRequest avoids duplicate network requests.
+    PyGithub's as_issue() creates a new Issue instance on each call, requiring
+    a separate HTTP GET request when accessing attributes like closed_by. Caching
+    by issue URL avoids redundant Issue completions across filter passes.
     """
+    url = getattr(self, "issue_url", None)
+    if url:
+        if url not in _ISSUE_CACHE:
+            _ISSUE_CACHE[url] = _orig_as_issue(self)
+        return _ISSUE_CACHE[url]
+
     if not hasattr(self, "_cached_issue"):
         self._cached_issue = _orig_as_issue(self)
     return self._cached_issue
