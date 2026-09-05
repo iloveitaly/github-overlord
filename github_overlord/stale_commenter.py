@@ -1,4 +1,7 @@
 import funcy_pipe as fp
+from github import Github
+from github.GithubException import GithubException
+from github.Issue import Issue
 from github.IssueComment import IssueComment
 from github.PullRequest import PullRequest
 from github.Repository import Repository
@@ -8,20 +11,104 @@ from github_overlord.ai import get_agent
 from github_overlord.utils import log
 
 
-def inspect_repo_for_stale_prs(dry_run: bool, login: str, repo: Repository):
-    log.debug("inspecting repo for stale PRs", repo=repo.full_name)
+class StalePRsResult(BaseModel):
+    inspected: int = 0
+    kept_alive: int = 0
+    skipped: int = 0
+    failed: int = 0
 
-    return (
-        # there is not a way to filter by the user which created the PR! This take a long time on repos with many PRs
-        repo.get_pulls(state="open")
-        # make sure the auth token user is the author of the PR
-        | fp.filter(lambda pr: pr.user.login == login)
-        | fp.map(fp.partial(check_for_stale_comments, dry_run))
-        | fp.to_list()
+    def __init__(
+        self,
+        checked: int | None = None,
+        commented: int | None = None,
+        **data,
+    ):
+        if checked is not None and "inspected" not in data:
+            data["inspected"] = checked
+        if commented is not None and "kept_alive" not in data:
+            data["kept_alive"] = commented
+        super().__init__(**data)
+
+    @property
+    def checked(self) -> int:
+        return self.inspected
+
+    @property
+    def commented(self) -> int:
+        return self.kept_alive
+
+
+def inspect_stale_prs(
+    github: Github,
+    login: str,
+    dry_run: bool,
+    repo: str | None = None,
+) -> StalePRsResult:
+    if repo:
+        query = f"is:pr is:open author:{login} repo:{repo}"
+        log.info("searching for stale PRs in repo", repo=repo)
+    else:
+        query = f"is:pr is:open author:{login} -user:{login}"
+        log.info("searching for open external PRs", author=login)
+
+    try:
+        issues = list(github.search_issues(query))
+    except GithubException as e:
+        log.error(
+            "failed to search for pull requests",
+            error=str(e),
+            status=e.status if hasattr(e, "status") else None,
+        )
+        return StalePRsResult(failed=1)
+
+    log.info("found open PRs to inspect", count=len(issues))
+
+    inspected = 0
+    kept_alive = 0
+    skipped = 0
+    failed = 0
+
+    for issue in issues:
+        inspected += 1
+        result = check_for_stale_comments(dry_run, issue)
+        if result is True:
+            kept_alive += 1
+        elif result is False:
+            skipped += 1
+        else:
+            failed += 1
+
+    return StalePRsResult(
+        inspected=inspected,
+        kept_alive=kept_alive,
+        skipped=skipped,
+        failed=failed,
     )
 
 
-def check_for_stale_comments(dry_run: bool, pr: PullRequest):
+def inspect_repo_for_stale_prs(dry_run: bool, login: str, repo: Repository):
+    log.debug("inspecting repo for stale PRs", repo=repo.full_name)
+
+    try:
+        return (
+            # there is not a way to filter by the user which created the PR! This take a long time on repos with many PRs
+            repo.get_pulls(state="open")
+            # make sure the auth token user is the author of the PR
+            | fp.filter(lambda pr: pr.user.login == login)
+            | fp.map(fp.partial(check_for_stale_comments, dry_run))
+            | fp.to_list()
+        )
+    except GithubException as e:
+        log.warning(
+            "failed to inspect repo for stale PRs",
+            repo=repo.full_name,
+            error=str(e),
+            status=e.status if hasattr(e, "status") else None,
+        )
+        return []
+
+
+def check_for_stale_comments(dry_run: bool, pr: Issue | PullRequest) -> bool | None:
     """
     Look at PRs which you have written:
 
@@ -33,32 +120,65 @@ def check_for_stale_comments(dry_run: bool, pr: PullRequest):
 
     log.debug("checking for stale comments", url=pr.html_url)
 
-    # PR comments are comments on the cod3
-    issue = pr.as_issue()
-    comments = list(issue.get_comments())
+    try:
+        issue: Issue = pr.as_issue() if isinstance(pr, PullRequest) else pr
+    except GithubException as e:
+        log.warning(
+            "failed to get issue for PR",
+            url=pr.html_url,
+            error=str(e),
+            status=e.status if hasattr(e, "status") else None,
+        )
+        return None
+
+    if getattr(issue, "comments", None) == 0:
+        log.debug("PR has no comments", url=pr.html_url)
+        return False
+
+    try:
+        comments = list(issue.get_comments())
+    except GithubException as e:
+        log.warning(
+            "failed to fetch comments for PR",
+            url=pr.html_url,
+            error=str(e),
+            status=e.status if hasattr(e, "status") else None,
+        )
+        return None
 
     if len(comments) == 0:
-        return
+        return False
 
     last_comment = comments[-1]
 
     # TODO this will need to be changed
     if last_comment.user.login != "github-actions[bot]":
         log.debug("Last comment is not from github-actions[bot]", url=pr.html_url)
-        return
+        return False
 
     is_stale, comment = is_stale_comment(last_comment)
 
     if not is_stale or not comment:
         log.debug("comment does not indicate stale state", url=pr.html_url)
-        return
+        return False
 
     log.info(
         "comment indicates stale state, commenting", url=pr.html_url, comment=comment
     )
 
     if not dry_run:
-        pr.create_issue_comment(comment)
+        try:
+            issue.create_comment(comment)
+        except GithubException as e:
+            log.error(
+                "failed to create comment on stale PR",
+                url=pr.html_url,
+                error=str(e),
+                status=e.status if hasattr(e, "status") else None,
+            )
+            return None
+
+    return True
 
 
 class StaleCommentDecision(BaseModel):

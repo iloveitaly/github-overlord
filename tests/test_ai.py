@@ -104,6 +104,138 @@ def test_is_stale_comment():
         assert comment == "Friendly reminder!"
 
 
+def test_inspect_repo_for_stale_prs_handles_github_exception():
+    from github.GithubException import UnknownObjectException
+
+    from github_overlord.stale_commenter import inspect_repo_for_stale_prs
+
+    mock_repo = MagicMock()
+    mock_repo.full_name = "Codeinwp/Nivo-Slider-jQuery"
+    mock_repo.get_pulls.side_effect = UnknownObjectException(
+        status=404, data={"message": "Not Found"}
+    )
+
+    result = inspect_repo_for_stale_prs(
+        dry_run=True, login="iloveitaly", repo=mock_repo
+    )
+    assert result == []
+
+
+def test_check_for_stale_comments_handles_github_exception():
+    from github.GithubException import GithubException
+    from github.PullRequest import PullRequest
+
+    from github_overlord.stale_commenter import check_for_stale_comments
+
+    mock_pr = MagicMock(spec=PullRequest)
+    mock_pr.html_url = "https://github.com/org/repo/pull/1"
+    mock_pr.as_issue.side_effect = GithubException(
+        status=404, data={"message": "Not Found"}
+    )
+
+    # Should not raise exception and return None
+    result = check_for_stale_comments(dry_run=True, pr=mock_pr)
+    assert result is None
+
+
+def test_check_for_stale_comments_skips_zero_comments():
+    from github_overlord.stale_commenter import check_for_stale_comments
+
+    mock_pr = MagicMock()
+    mock_pr.comments = 0
+    mock_pr.as_issue.return_value = mock_pr
+
+    result = check_for_stale_comments(dry_run=True, pr=mock_pr)
+    assert result is False
+    mock_pr.get_comments.assert_not_called()
+
+
+def test_inspect_stale_prs_search_query_without_repo():
+    from github_overlord.stale_commenter import inspect_stale_prs
+
+    mock_github = MagicMock()
+    mock_issue = MagicMock()
+    mock_issue.comments = 0
+    mock_github.search_issues.return_value = [mock_issue]
+
+    result = inspect_stale_prs(
+        github=mock_github, login="testuser", dry_run=True, repo=None
+    )
+    mock_github.search_issues.assert_called_once_with(
+        "is:pr is:open author:testuser -user:testuser"
+    )
+    assert result.checked == 1
+    assert result.inspected == 1
+    assert result.kept_alive == 0
+    assert result.skipped == 1
+    assert result.failed == 0
+
+
+def test_inspect_stale_prs_search_query_with_repo():
+    from github_overlord.stale_commenter import inspect_stale_prs
+
+    mock_github = MagicMock()
+    mock_github.search_issues.return_value = []
+
+    result = inspect_stale_prs(
+        github=mock_github, login="testuser", dry_run=True, repo="owner/repo"
+    )
+    mock_github.search_issues.assert_called_once_with(
+        "is:pr is:open author:testuser repo:owner/repo"
+    )
+    assert result.checked == 0
+    assert result.inspected == 0
+    assert result.kept_alive == 0
+    assert result.skipped == 0
+    assert result.failed == 0
+
+
+def test_inspect_stale_prs_handles_github_exception():
+    from github.GithubException import GithubException
+
+    from github_overlord.stale_commenter import inspect_stale_prs
+
+    mock_github = MagicMock()
+    mock_github.search_issues.side_effect = GithubException(
+        status=403, data={"message": "rate limited"}
+    )
+
+    result = inspect_stale_prs(
+        github=mock_github, login="testuser", dry_run=True, repo=None
+    )
+    assert result.checked == 0
+    assert result.inspected == 0
+    assert result.kept_alive == 0
+    assert result.failed == 1
+
+
+def test_inspect_stale_prs_counts_kept_alive():
+    from github_overlord.stale_commenter import inspect_stale_prs
+
+    mock_github = MagicMock()
+    mock_issue = MagicMock()
+    mock_issue.comments = 1
+    mock_comment = MagicMock()
+    mock_comment.user.login = "github-actions[bot]"
+    mock_comment.body = "Stale PR"
+    mock_issue.get_comments.return_value = [mock_comment]
+
+    mock_github.search_issues.return_value = [mock_issue]
+
+    with patch(
+        "github_overlord.stale_commenter.is_stale_comment",
+        return_value=(True, "Keep alive comment"),
+    ):
+        result = inspect_stale_prs(
+            github=mock_github, login="testuser", dry_run=True, repo=None
+        )
+
+    assert result.inspected == 1
+    assert result.kept_alive == 1
+    assert result.skipped == 0
+    assert result.failed == 0
+
+
 def test_should_create_release():
     mock_repo = MagicMock()
     mock_repo.get_releases.return_value = []

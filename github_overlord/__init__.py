@@ -10,7 +10,7 @@ from .ai import get_expected_ai_key_var, is_ai_key_configured
 from .dependabot import dependabot
 from .notifications import notifications
 from .release_checker import check_repo_for_release
-from .stale_commenter import inspect_repo_for_stale_prs
+from .stale_commenter import inspect_stale_prs
 from .utils import extract_repo_reference_from_github_url, log
 from .version import __version__
 
@@ -41,8 +41,7 @@ def cli():
     help="GitHub token, can also be set via GITHUB_TOKEN",
     default=os.getenv("GITHUB_TOKEN"),
 )
-# TODO move this into the parent command
-@click.option("--dry-run", is_flag=True, help="Run script without merging PRs")
+@click.option("--dry-run", is_flag=True, help="Run script without creating comments")
 @click.option("--repo", help="Only process a single repository")
 def keep_alive_prs(token, dry_run, repo):
     """
@@ -64,23 +63,25 @@ def keep_alive_prs(token, dry_run, repo):
 
     repo = extract_repo_reference_from_github_url(repo)
 
-    if repo:
-        inspect_repo_for_stale_prs(dry_run, login, github.get_repo(repo))
+    result = inspect_stale_prs(github, login, dry_run, repo)
+    if dry_run:
+        log.info(
+            "stale PR check complete",
+            dry_run=True,
+            prs_inspected=result.inspected,
+            would_keep_alive=result.kept_alive,
+            skipped=result.skipped,
+            failed=result.failed,
+        )
         return
 
-    def transform_forked_repos(repo):
-        return repo.parent if repo.fork else repo
-
-    # TODO this isn't perfect because you may be a contributor :/
-    _ = (
-        user.get_repos(type="public")
-        | fp.map(transform_forked_repos)
-        | fp.filter(lambda repo: repo.owner.login != login)
-        | fp.map(fp.partial(inspect_repo_for_stale_prs, dry_run, login))
-        | fp.to_list()
+    log.info(
+        "stale PR check complete",
+        prs_inspected=result.inspected,
+        kept_alive=result.kept_alive,
+        skipped=result.skipped,
+        failed=result.failed,
     )
-
-    log.info("stale PR check complete")
 
 
 @click.command(name="generate-releases")
