@@ -3,11 +3,11 @@ import os
 import click
 import funcy_pipe as fp
 from github import Github
-from github.Notification import Notification
 
-import github_overlord.patch as _
+import github_overlord.patch  # noqa: F401
 
 from .dependabot import dependabot
+from .notifications import notifications
 from .release_checker import check_repo_for_release
 from .stale_commenter import inspect_repo_for_stale_prs
 from .utils import extract_repo_reference_from_github_url, log
@@ -21,7 +21,6 @@ def cli():
     GitHub Overlord is a tool to help manage annoying tasks across your GitHub repositories. Some of this could be done
     by GitHub Actions, but this eliminates the need to carefully configure GH actions for each repo.
     """
-
 
 
 @click.command()
@@ -57,7 +56,7 @@ def keep_alive_prs(token, dry_run, repo):
         return repo.parent if repo.fork else repo
 
     # TODO this isn't perfect because you may be a contributor :/
-    (
+    _ = (
         user.get_repos(type="public")
         | fp.map(transform_forked_repos)
         | fp.filter(lambda repo: repo.owner.login != login)
@@ -66,89 +65,6 @@ def keep_alive_prs(token, dry_run, repo):
     )
 
     log.info("stale PR check complete")
-
-
-@click.command()
-@click.option(
-    "--token",
-    help="GitHub token, can also be set via GITHUB_TOKEN",
-    default=os.getenv("GITHUB_TOKEN"),
-)
-# TODO move this into the parent command
-@click.option(
-    "--dry-run",
-    is_flag=True,
-    help="Run script without marking notification as complete",
-)
-@click.option(
-    "--all-notifications",
-    is_flag=True,
-    help="Don't limit notifications to unread",
-    default=False,
-)
-def notifications(token, dry_run, all_notifications):
-    """
-    Look at notifications and mark them as read if they are:
-
-    * Dependabot notifications
-    * Releases on repos I own
-    * Closed (merged, closed) pull requests on repos I own
-    * Closed pull requests that I authored
-
-    Helpful if you work across a lot of repos and want to keep your notifications clean.
-    """
-
-    github = Github(token)
-    user = github.get_user()
-    login = user.login
-
-    # all includes read notifications AND done notifications :/
-    # there is no way to determine if a notification is marked as done
-    notifications = list(user.get_notifications(all=all_notifications))
-
-    # TODO fix funcy_pipe here
-    released_on_owned_repos = (
-        notifications
-        | fp.filter(
-            lambda n: n.subject.type == "Release" and n.repository.owner.login == login
-            # TODO I think there is a way to convert the instance method to a standard method so it could be mapped
-            #      patchy had some code for this
-        )
-        | fp.lmap(Notification.mark_as_done)
-    )
-
-    log.info("marked releases as done", count=len(released_on_owned_repos))
-
-    def is_dependabot_notification(notification: Notification) -> bool:
-        return notification.get_pull_request().user.login == "dependabot[bot]"
-
-    def is_pull_request(notification: Notification) -> bool:
-        return notification.subject.type == "PullRequest"
-
-    def is_pull_request_open(notification: Notification) -> bool:
-        return notification.get_pull_request().state == "open"
-
-    # TODO github digest has some logic to detect bots, maybev we can use that
-    pull_requests_by_dependabot = (
-        notifications
-        | fp.filter(is_pull_request)
-        | fp.filter(is_dependabot_notification)
-        | fp.lmap(Notification.mark_as_done)
-    )
-
-    log.info("marked dependabot PRs as done", count=len(pull_requests_by_dependabot))
-
-    # Closed (merged, closed) pull requests that I authored
-    owned_closed_pull_requests = (
-        notifications
-        # PRs that I did not author may still be interesting
-        | fp.where_attr(reason="author")
-        | fp.filter(is_pull_request)
-        | fp.filter(fp.complement(is_pull_request_open))
-        | fp.lmap(Notification.mark_as_done)
-    )
-
-    log.info("marked owned closed PRs as done", count=len(owned_closed_pull_requests))
 
 
 @click.command(name="generate-releases")
@@ -192,7 +108,9 @@ def generate_releases(dry_run, topic, repo):
         if result["created"]:
             log.info("release check complete - created 1 release", dry_run=dry_run)
         elif result["failed"]:
-            log.info("release check complete - failed to create release", dry_run=dry_run)
+            log.info(
+                "release check complete - failed to create release", dry_run=dry_run
+            )
         else:
             log.info("release check complete - no release needed", dry_run=dry_run)
         return
@@ -218,11 +136,7 @@ def generate_releases(dry_run, topic, repo):
         return check_repo_for_release(r, dry_run=dry_run)
 
     # Process each repo and collect results
-    results = (
-        repos
-        | fp.map(_check_repo_with_log)
-        | fp.to_list()
-    )
+    results = repos | fp.map(_check_repo_with_log) | fp.to_list()
 
     # Check if any repos were found
     if not results:
