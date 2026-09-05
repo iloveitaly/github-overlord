@@ -13,7 +13,7 @@ from github import GithubException
 from github.Repository import Repository
 from pydantic import BaseModel, Field
 
-from github_overlord.ai import get_agent, run_agent_sync
+from github_overlord.ai import get_agent
 from github_overlord.config import JINJA_ENV
 from github_overlord.utils import log
 
@@ -261,7 +261,7 @@ def analyze_commits_with_llm(
 
     try:
         agent = get_agent(output_type=ReleaseAnalysis)
-        result = run_agent_sync(agent, prompt)
+        result = agent.run_sync(prompt)
         return result.output.model_dump()
 
     except Exception as e:  # noqa: BLE001

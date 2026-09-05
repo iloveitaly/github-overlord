@@ -4,7 +4,7 @@ from github.PullRequest import PullRequest
 from github.Repository import Repository
 from pydantic import BaseModel, Field
 
-from github_overlord.ai import get_agent, run_agent_sync
+from github_overlord.ai import get_agent
 from github_overlord.utils import log
 
 
@@ -101,7 +101,7 @@ Do not:
 
     try:
         agent = get_agent(output_type=StaleCommentDecision, system_prompt=prompt)
-        result = run_agent_sync(agent, comment_markdown)
+        result = agent.run_sync(comment_markdown)
         output: StaleCommentDecision = result.output
         return (output.stale, output.comment)
     except Exception as e:  # noqa: BLE001

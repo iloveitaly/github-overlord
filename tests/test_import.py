@@ -25,8 +25,8 @@ def test_patch_hashes() -> None:
 
 
 def test_url_keyed_caching() -> None:
-    """Test that patched methods cache results by URL across different instances."""
-    from unittest.mock import MagicMock, patch
+    """Test that patched methods cache results across instances using stdlib lru_cache."""
+    from unittest.mock import MagicMock
 
     from github.Notification import Notification
     from github.PullRequest import PullRequest
@@ -35,53 +35,76 @@ def test_url_keyed_caching() -> None:
 
     clear_cache()
 
-    # Test Notification.get_pull_request URL-keyed cache across distinct instances
-    n1 = MagicMock(spec=Notification)
-    n1.subject.url = "https://api.github.com/repos/owner/repo/pulls/42"
-    n2 = MagicMock(spec=Notification)
-    n2.subject.url = "https://api.github.com/repos/owner/repo/pulls/42"
+    requester = MagicMock()
+    requester.base_url = "https://api.github.com"
+    requester.is_lazy = False
+    requester.is_not_lazy = True
+    requester.requestJsonAndCheck.return_value = (
+        {},
+        {
+            "url": "https://api.github.com/repos/owner/repo/pulls/42",
+            "issue_url": "https://api.github.com/repos/owner/repo/issues/42",
+        },
+    )
 
-    mock_pr = MagicMock(spec=PullRequest)
-    with patch(
-        "github_overlord.patch._orig_get_pull_request", return_value=mock_pr
-    ) as mock_orig:
-        res1 = Notification.get_pull_request(n1)
-        res2 = Notification.get_pull_request(n2)
-        assert res1 is res2
-        assert mock_orig.call_count == 1
+    # Test Notification.get_pull_request cached across distinct instances with same URL
+    n1 = Notification(
+        requester,
+        {},
+        {
+            "url": "https://api.github.com/notifications/threads/1",
+            "subject": {"url": "https://api.github.com/repos/owner/repo/pulls/42"},
+        },
+        True,
+    )
+    n2 = Notification(
+        requester,
+        {},
+        {
+            "url": "https://api.github.com/notifications/threads/1",
+            "subject": {"url": "https://api.github.com/repos/owner/repo/pulls/42"},
+        },
+        True,
+    )
 
-    # Test PullRequest.get_reviews URL-keyed cache across distinct instances
-    pr1 = MagicMock(spec=PullRequest)
-    pr1.url = "https://api.github.com/repos/owner/repo/pulls/42"
-    pr2 = MagicMock(spec=PullRequest)
-    pr2.url = "https://api.github.com/repos/owner/repo/pulls/42"
+    pr1 = n1.get_pull_request()
+    pr2 = n2.get_pull_request()
+    assert pr1 is pr2
+    assert Notification.get_pull_request.cache_info().hits == 1
 
-    mock_reviews = [MagicMock()]
-    with patch(
-        "github_overlord.patch._orig_get_reviews", return_value=mock_reviews
-    ) as mock_orig_rev:
-        revs1 = PullRequest.get_reviews(pr1)
-        revs2 = PullRequest.get_reviews(pr2)
-        assert revs1 is revs2
-        assert mock_orig_rev.call_count == 1
+    # Test PullRequest.get_reviews cached across distinct instances with same URL
+    pr_inst1 = PullRequest(
+        requester,
+        {},
+        {
+            "url": "https://api.github.com/repos/owner/repo/pulls/42",
+            "issue_url": "https://api.github.com/repos/owner/repo/issues/42",
+        },
+        True,
+    )
+    pr_inst2 = PullRequest(
+        requester,
+        {},
+        {
+            "url": "https://api.github.com/repos/owner/repo/pulls/42",
+            "issue_url": "https://api.github.com/repos/owner/repo/issues/42",
+        },
+        True,
+    )
 
-    # Test PullRequest.as_issue URL-keyed cache across distinct instances
-    pr1.issue_url = "https://api.github.com/repos/owner/repo/issues/42"
-    pr2.issue_url = "https://api.github.com/repos/owner/repo/issues/42"
+    revs1 = pr_inst1.get_reviews()
+    revs2 = pr_inst2.get_reviews()
+    assert revs1 is revs2
+    assert PullRequest.get_reviews.cache_info().hits == 1
 
-    mock_issue = MagicMock()
-    with patch(
-        "github_overlord.patch._orig_as_issue", return_value=mock_issue
-    ) as mock_orig_issue:
-        iss1 = PullRequest.as_issue(pr1)
-        iss2 = PullRequest.as_issue(pr2)
-        assert iss1 is iss2
-        assert mock_orig_issue.call_count == 1
+    # Test PullRequest.as_issue cached across distinct instances with same URL
+    iss1 = pr_inst1.as_issue()
+    iss2 = pr_inst2.as_issue()
+    assert iss1 is iss2
+    assert PullRequest.as_issue.cache_info().hits == 1
 
-    # Test clear_cache
+    # Test clear_cache clears all lru_cache stats and entries
     clear_cache()
-    with patch(
-        "github_overlord.patch._orig_get_pull_request", return_value=mock_pr
-    ) as mock_orig:
-        Notification.get_pull_request(n1)
-        assert mock_orig.call_count == 1
+    assert Notification.get_pull_request.cache_info().currsize == 0
+    assert PullRequest.get_reviews.cache_info().currsize == 0
+    assert PullRequest.as_issue.cache_info().currsize == 0

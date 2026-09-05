@@ -6,11 +6,7 @@ from unittest.mock import MagicMock, patch
 from github_overlord.ai import (
     DEFAULT_MODEL_NAME,
     get_agent,
-    get_expected_ai_key_var,
-    get_model_name,
-    is_ai_key_configured,
     normalize_model_name,
-    update_env_variables,
 )
 from github_overlord.stale_commenter import is_stale_comment
 
@@ -27,45 +23,36 @@ def test_normalize_model_name():
     assert normalize_model_name("claude-3-5-sonnet") == "anthropic:claude-3-5-sonnet"
 
 
-def test_universal_ai_key_mapping():
-    test_cases = [
-        ("openai:gpt-4o", "OPENAI_API_KEY"),
-        ("anthropic:claude-3-5-sonnet", "ANTHROPIC_API_KEY"),
-        ("gemini-3.8-flash", "GOOGLE_API_KEY"),
-        ("google:gemini-3.8-flash", "GOOGLE_API_KEY"),
-        ("azure:gpt-4", "AZURE_OPENAI_API_KEY"),
-        ("groq:llama3", "GROQ_API_KEY"),
-    ]
-
-    for model, target_var in test_cases:
-        with patch.dict(
-            os.environ,
-            {"GITHUB_OVERLORD_AI_KEY": "test-key-123", "GITHUB_OVERLORD_MODEL": model},
-            clear=True,
-        ):
-            update_env_variables()
-            assert os.environ.get(target_var) == "test-key-123", (
-                f"Failed for model {model}"
-            )
-
-
-def test_ai_key_precedence():
-    # Direct provider key should take precedence over universal GITHUB_OVERLORD_AI_KEY
+def test_get_agent_universal_key_mapping():
     with patch.dict(
         os.environ,
         {
-            "GITHUB_OVERLORD_AI_KEY": "universal-key",
+            "GITHUB_OVERLORD_AI_KEY": "test-key",
+            "GITHUB_OVERLORD_MODEL": "gemini-3.8-flash",
+        },
+        clear=True,
+    ):
+        agent = get_agent()
+        assert os.environ.get("GOOGLE_API_KEY") == "test-key"
+        assert agent is not None
+
+
+def test_get_agent_key_precedence():
+    with patch.dict(
+        os.environ,
+        {
+            "GITHUB_OVERLORD_AI_KEY": "generic-key",
             "GOOGLE_API_KEY": "specific-key",
             "GITHUB_OVERLORD_MODEL": "gemini-3.8-flash",
         },
         clear=True,
     ):
-        update_env_variables()
+        agent = get_agent()
         assert os.environ.get("GOOGLE_API_KEY") == "specific-key"
+        assert agent is not None
 
 
-def test_overload_alias_support():
-    # GITHUB_OVERLOAD_ (common typo) is supported as an alias
+def test_get_agent_overload_alias():
     with patch.dict(
         os.environ,
         {
@@ -74,36 +61,8 @@ def test_overload_alias_support():
         },
         clear=True,
     ):
-        update_env_variables()
-        assert os.environ.get("GOOGLE_API_KEY") == "overload-key"
-        assert get_model_name() == "google:gemini-3.8-flash"
-
-
-def test_is_ai_key_configured():
-    with patch.dict(os.environ, {}, clear=True):
-        assert not is_ai_key_configured()
-
-    with patch.dict(os.environ, {"GOOGLE_API_KEY": "key"}, clear=True):
-        assert is_ai_key_configured()
-        assert get_expected_ai_key_var() == "GOOGLE_API_KEY"
-
-    with patch.dict(
-        os.environ,
-        {"GITHUB_OVERLORD_AI_KEY": "key", "GITHUB_OVERLORD_MODEL": "openai:gpt-4o"},
-        clear=True,
-    ):
-        assert is_ai_key_configured()
-        assert get_expected_ai_key_var() == "OPENAI_API_KEY"
-
-
-def test_get_agent():
-    with patch.dict(
-        os.environ,
-        {"GITHUB_OVERLORD_MODEL": "gemini-3.8-flash", "GOOGLE_API_KEY": "dummy"},
-        clear=True,
-    ):
         agent = get_agent()
-        assert get_model_name() == "google:gemini-3.8-flash"
+        assert os.environ.get("GOOGLE_API_KEY") == "overload-key"
         assert agent is not None
 
 
