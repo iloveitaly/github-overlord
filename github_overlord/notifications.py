@@ -8,7 +8,38 @@ import funcy_pipe as fp
 from github import Github
 from github.Notification import Notification
 
+import github_overlord.patch  # noqa: F401
+
 from .utils import log
+
+
+def is_pull_request(notification: Notification) -> bool:
+    return notification.subject.type == "PullRequest"
+
+
+def is_self_authored_pr_without_activity(
+    notification: Notification, login: str
+) -> bool:
+    """Matches PR notifications created by the user that have no comments or external reviews."""
+    if notification.reason != "author":
+        return False
+
+    if not is_pull_request(notification):
+        return False
+
+    # If latest_comment_url is populated, someone has commented on the thread
+    if getattr(notification.subject, "latest_comment_url", None) is not None:
+        return False
+
+    pr = notification.get_pull_request()
+    if not pr.user or pr.user.login != login:
+        return False
+
+    if pr.comments > 0 or pr.review_comments > 0:
+        return False
+
+    external_reviews = [r for r in pr.get_reviews() if r.user and r.user.login != login]
+    return not external_reviews
 
 
 def clean_notifications(
@@ -30,10 +61,13 @@ def clean_notifications(
     def is_older_than_one_year(notification: Notification) -> bool:
         return notification.updated_at < one_year_ago
 
+    if dry_run:
+        log.info("running notifications cleanup in dry-run mode")
+
+    mark_done = (lambda _n: None) if dry_run else Notification.mark_as_done
+
     old_notifications = (
-        notifications_list
-        | fp.filter(is_older_than_one_year)
-        | fp.lmap(Notification.mark_as_done)
+        notifications_list | fp.filter(is_older_than_one_year) | fp.lmap(mark_done)
     )
 
     log.info("marked old notifications as done", count=len(old_notifications))
@@ -57,7 +91,7 @@ def clean_notifications(
         | fp.filter(is_release_on_controlled_repo)
         # TODO I think there is a way to convert the instance method to a standard method so it could be mapped
         #      patchy had some code for this
-        | fp.lmap(Notification.mark_as_done)
+        | fp.lmap(mark_done)
     )
 
     log.info("marked releases as done", count=len(released_on_controlled_repos))
@@ -77,9 +111,6 @@ def clean_notifications(
             or pull_request.head.ref.startswith("release-please--branches--")
         )
 
-    def is_pull_request(notification: Notification) -> bool:
-        return notification.subject.type == "PullRequest"
-
     def is_pull_request_open(notification: Notification) -> bool:
         return notification.get_pull_request().state == "open"
 
@@ -88,7 +119,7 @@ def clean_notifications(
         notifications_list
         | fp.filter(is_pull_request)
         | fp.filter(is_bot_authored_pull_request)
-        | fp.lmap(Notification.mark_as_done)
+        | fp.lmap(mark_done)
     )
 
     log.info("marked bot-authored PRs as done", count=len(bot_authored_pull_requests))
@@ -97,7 +128,7 @@ def clean_notifications(
         notifications_list
         | fp.filter(is_pull_request)
         | fp.filter(is_release_please_pull_request)
-        | fp.lmap(Notification.mark_as_done)
+        | fp.lmap(mark_done)
     )
 
     log.info(
@@ -113,10 +144,21 @@ def clean_notifications(
         | fp.where_attr(reason="author")  # type: ignore
         | fp.filter(is_pull_request)
         | fp.filter(fp.complement(is_pull_request_open))
-        | fp.lmap(Notification.mark_as_done)
+        | fp.lmap(mark_done)
     )
 
     log.info("marked owned closed PRs as done", count=len(owned_closed_pull_requests))
+
+    self_authored_inactive_prs = (
+        notifications_list
+        | fp.filter(lambda n: is_self_authored_pr_without_activity(n, login))
+        | fp.lmap(mark_done)
+    )
+
+    log.info(
+        "marked self-authored PR creation notifications as done",
+        count=len(self_authored_inactive_prs),
+    )
 
 
 @click.command()
@@ -146,6 +188,7 @@ def notifications(token, dry_run, all_notifications):
     * Releases on repos I control (own or have push access to)
     * Closed (merged, closed) pull requests on repos I own
     * Closed pull requests that I authored
+    * Self-authored pull request creation notifications without external activity
 
     Helpful if you work across a lot of repos and want to keep your notifications clean.
     """
