@@ -10,7 +10,7 @@ GitHub Overlord is a Python script that does a couple things to help manage open
 
 * Automatically merges Dependabot PRs in public repositories that have passed CI checks.
 * Comment on PRs that are going to automatically be marked as stale
-* Removes notifications from bot-authored PRs, Release Please PRs, self-authored PR creations without external activity, and releases on repos you control
+* Removes notifications from bot-authored PRs, Release Please PRs, self-authored PR creations without external activity, PRs merged by you, PRs closed by you, PRs approved by you that are now merged, notifications older than two months, and releases on repos you control
 * Automatically creates releases for repositories based on LLM analysis of recent commits
 
 This simple project has also given me the chance to iterate on my [nixpacks github actions project](https://github.com/iloveitaly/github-action-nixpacks).
