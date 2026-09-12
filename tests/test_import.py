@@ -108,3 +108,16 @@ def test_url_keyed_caching() -> None:
     assert Notification.get_pull_request.cache_info().currsize == 0
     assert PullRequest.get_reviews.cache_info().currsize == 0
     assert PullRequest.as_issue.cache_info().currsize == 0
+
+
+def test_generate_releases_max_releases_option() -> None:
+    """Test that max-releases option exists on generate_releases command with default 1."""
+    from click.testing import CliRunner
+    from github_overlord import generate_releases
+
+    runner = CliRunner()
+    result = runner.invoke(generate_releases, ["--help"])
+    assert result.exit_code == 0
+    assert "--max-releases" in result.output
+    assert "-m" in result.output
+

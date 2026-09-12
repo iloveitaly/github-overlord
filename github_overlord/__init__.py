@@ -96,7 +96,15 @@ def keep_alive_prs(token, dry_run, repo):
     help="Only process a single repository (can also be set via RELEASE_CHECKER_REPO)",
     default=os.getenv("RELEASE_CHECKER_REPO"),
 )
-def generate_releases(dry_run, topic, repo):
+@click.option(
+    "--max-releases",
+    "-m",
+    type=int,
+    default=lambda: int(os.getenv("RELEASE_CHECKER_MAX_RELEASES", "1")),
+    show_default="1",
+    help="Maximum number of releases to create in a single run (0 for unlimited)",
+)
+def generate_releases(dry_run, topic, repo, max_releases):
     """
     Check repositories for release readiness using LLM analysis and create releases when appropriate
     """
@@ -138,16 +146,31 @@ def generate_releases(dry_run, topic, repo):
     log.info("filtering by topic", topic=topic)
 
     # Get all public repos owned by user with the specified topic
-    repos = user.get_repos(type="public") | fp.filter(
-        lambda r: r.owner.login == user.login and not r.fork and topic in r.get_topics()
+    repos = g.search_repositories(
+        f"user:{user.login} topic:{topic} fork:false is:public",
+        sort="updated",
+        order="desc",
     )
 
     def _check_repo_with_log(r):
         log.info("checking repo for release", repo=r.full_name, dry_run=dry_run)
         return check_repo_for_release(r, dry_run=dry_run)
 
-    # Process each repo and collect results
-    results = repos | fp.map(_check_repo_with_log) | fp.to_list()
+    results = []
+    created_count = 0
+
+    for r in repos:
+        if max_releases > 0 and created_count >= max_releases:
+            log.info(
+                "reached max releases limit for this run",
+                max_releases=max_releases,
+            )
+            break
+
+        res = _check_repo_with_log(r)
+        results.append(res)
+        if res["created"]:
+            created_count += 1
 
     # Check if any repos were found
     if not results:
