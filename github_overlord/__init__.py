@@ -1,7 +1,6 @@
 import os
 
 import click
-import funcy_pipe as fp
 from github import Github
 
 import github_overlord.patch  # noqa: F401

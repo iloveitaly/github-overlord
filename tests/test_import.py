@@ -113,6 +113,7 @@ def test_url_keyed_caching() -> None:
 def test_generate_releases_max_releases_option() -> None:
     """Test that max-releases option exists on generate_releases command with default 1."""
     from click.testing import CliRunner
+
     from github_overlord import generate_releases
 
     runner = CliRunner()
@@ -120,4 +121,3 @@ def test_generate_releases_max_releases_option() -> None:
     assert result.exit_code == 0
     assert "--max-releases" in result.output
     assert "-m" in result.output
-
