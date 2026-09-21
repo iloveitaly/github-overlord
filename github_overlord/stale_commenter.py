@@ -6,7 +6,7 @@ from github.PullRequest import PullRequest
 from pydantic import BaseModel, Field
 
 from github_overlord.ai import get_agent
-from github_overlord.utils import log
+from github_overlord.utils import log, log_token_policy_skip
 
 
 class StalePRsResult(BaseModel):
@@ -68,7 +68,15 @@ def inspect_stale_prs(
 
     for issue in issues:
         inspected += 1
-        result = check_for_stale_comments(dry_run, issue, login=login)
+        try:
+            result = check_for_stale_comments(dry_run, issue, login=login)
+        except GithubException as error:
+            if not log_token_policy_skip(error, url=_html_url(issue)):
+                raise
+
+            failed += 1
+            continue
+
         if result is True:
             kept_alive += 1
         elif result is False:
@@ -98,14 +106,26 @@ def check_for_stale_comments(
 
     """
 
-    log.debug("checking for stale comments", url=pr.html_url)
+    try:
+        raw_url = pr.html_url
+    except GithubException as error:
+        if log_token_policy_skip(error):
+            return None
+
+        raise
+
+    url = raw_url if isinstance(raw_url, str) else None
+    log.debug("checking for stale comments", url=url)
 
     try:
         issue: Issue = pr.as_issue() if isinstance(pr, PullRequest) else pr
     except GithubException as e:
+        if log_token_policy_skip(e, url=url):
+            return None
+
         log.warning(
             "failed to get issue for PR",
-            url=pr.html_url,
+            url=url,
             error=str(e),
             status=e.status if hasattr(e, "status") else None,
         )
@@ -118,9 +138,12 @@ def check_for_stale_comments(
     try:
         comments = list(issue.get_comments())
     except GithubException as e:
+        if log_token_policy_skip(e, url=url):
+            return None
+
         log.warning(
             "failed to fetch comments for PR",
-            url=pr.html_url,
+            url=url,
             error=str(e),
             status=e.status if hasattr(e, "status") else None,
         )
@@ -167,9 +190,12 @@ def check_for_stale_comments(
             try:
                 issue.create_comment(comment_text)
             except GithubException as e:
+                if log_token_policy_skip(e, url=url):
+                    return None
+
                 log.error(
                     "failed to create comment on stale PR",
-                    url=pr.html_url,
+                    url=url,
                     error=str(e),
                     status=e.status if hasattr(e, "status") else None,
                 )
@@ -178,6 +204,18 @@ def check_for_stale_comments(
             return True
 
     return False
+
+
+def _html_url(pr: Issue | PullRequest) -> str | None:
+    try:
+        url = pr.html_url
+    except GithubException:
+        return None
+
+    if isinstance(url, str):
+        return url
+
+    return None
 
 
 class StaleCommentDecision(BaseModel):

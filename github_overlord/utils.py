@@ -9,6 +9,7 @@ from pathlib import Path
 
 import structlog
 from decouple import config
+from github.GithubException import GithubException
 
 root: Path
 
@@ -81,6 +82,57 @@ def extract_repo_reference_from_github_url(url: str | None) -> str | None:
         return url
 
     return f"{match.group(1)}/{match.group(2)}"
+
+
+_TOKEN_LIFETIME_FORBIDDEN = "forbids access via a fine-grained personal access token"
+
+
+def github_error_message(error: GithubException) -> str:
+    data = error.data
+    if isinstance(data, dict):
+        message = data.get("message")
+        if isinstance(message, str) and message:
+            return message
+
+    if error.message:
+        return error.message
+
+    return str(error)
+
+
+def is_fine_grained_token_lifetime_forbidden(error: BaseException) -> bool:
+    """GitHub orgs can reject fine-grained tokens whose lifetime is over 366 days."""
+
+    if not isinstance(error, GithubException) or error.status != 403:
+        return False
+
+    return _TOKEN_LIFETIME_FORBIDDEN in github_error_message(error).lower()
+
+
+def log_token_policy_skip(
+    error: GithubException,
+    url: str | None = None,
+    repo: str | None = None,
+    command: str | None = None,
+) -> bool:
+    """Log the org token-lifetime 403 and report that the caller should continue."""
+
+    if not is_fine_grained_token_lifetime_forbidden(error):
+        return False
+
+    context = {
+        key: value
+        for key, value in {"url": url, "repo": repo, "command": command}.items()
+        if value is not None
+    }
+
+    log.error(
+        "skipping github resource forbidden by token policy",
+        error=github_error_message(error),
+        status=error.status,
+        **context,
+    )
+    return True
 
 
 # side effects are bad, but it's fun to do bad things
