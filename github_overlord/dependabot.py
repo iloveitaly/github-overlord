@@ -18,8 +18,6 @@ from .utils import extract_repo_reference_from_github_url, log
 
 AUTOMATIC_MERGE_MESSAGE = "Automatically merged with [github-overlord](https://github.com/iloveitaly/github-overlord)"
 
-_TOKEN_LIFETIME_FORBIDDEN = "forbids access via a fine-grained personal access token"
-
 
 class DependencyAlert(TypedDict):
     alertState: str
@@ -269,34 +267,15 @@ class RepoDependabotResult(BaseModel):
     failed: int = 0
 
 
-def _token_lifetime_forbidden_message(error: GithubException) -> str | None:
-    if error.status != 403:
-        return None
-
-    data = error.data
-    message = data.get("message") if isinstance(data, dict) else error.message
-    if not isinstance(message, str):
-        return None
-
-    if _TOKEN_LIFETIME_FORBIDDEN not in message.lower():
-        return None
-
-    return message
-
-
-def _process_repo_skipping_token_policy(repo, dry_run: bool) -> RepoDependabotResult:
+def _process_repo_skipping_github_error(repo, dry_run: bool) -> RepoDependabotResult:
     try:
         return process_repo(repo, dry_run)
     except GithubException as error:
-        message = _token_lifetime_forbidden_message(error)
-        if message is None:
-            raise
-
         log.error(
-            "skipping repository forbidden by token policy",
+            "skipping repository after github error",
             repo=repo.full_name,
-            error=message,
             status=error.status,
+            error=str(error),
         )
         return RepoDependabotResult(failed=1)
 
@@ -361,7 +340,7 @@ def merge_dependabot_prs(
         results = (
             user.get_repos(type="public")
             | fp.filter(lambda current_repo: current_repo.owner.login == user.login)
-            | fp.map(fp.rpartial(_process_repo_skipping_token_policy, dry_run))
+            | fp.map(fp.rpartial(_process_repo_skipping_github_error, dry_run))
             | fp.to_list()
         )
 

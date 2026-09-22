@@ -95,16 +95,8 @@ def test_process_repo_handles_merge_failure():
         assert result.failed == 1
 
 
-def test_merge_dependabot_prs_skips_token_policy_repo_and_continues():
-    token_policy = GithubException(
-        403,
-        {
-            "message": (
-                "The 'CodingZeal' organization forbids access via a fine-grained "
-                "personal access tokens if the token's lifetime is greater than 366 days."
-            )
-        },
-    )
+def test_merge_dependabot_prs_skips_github_error_and_continues():
+    github_error = GithubException(403, {"message": "Forbidden"})
 
     with patch("github_overlord.dependabot.Github") as mock_github_class:
         mock_gh = MagicMock()
@@ -117,7 +109,7 @@ def test_merge_dependabot_prs_skips_token_policy_repo_and_continues():
         blocked.owner.login = "testuser"
         blocked.fork = False
         blocked.full_name = "CodingZeal/hash_diff"
-        blocked.get_pulls.side_effect = token_policy
+        blocked.get_pulls.side_effect = github_error
 
         remaining = MagicMock()
         remaining.owner.login = "testuser"
