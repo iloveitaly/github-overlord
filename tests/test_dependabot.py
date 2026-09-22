@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+from github.GithubException import GithubException
+
 from github_overlord.dependabot import (
     RepoDependabotResult,
     merge_dependabot_prs,
@@ -91,6 +93,47 @@ def test_process_repo_handles_merge_failure():
         assert result.checked == 1
         assert result.merged == 0
         assert result.failed == 1
+
+
+def test_merge_dependabot_prs_skips_token_policy_repo_and_continues():
+    token_policy = GithubException(
+        403,
+        {
+            "message": (
+                "The 'CodingZeal' organization forbids access via a fine-grained "
+                "personal access tokens if the token's lifetime is greater than 366 days."
+            )
+        },
+    )
+
+    with patch("github_overlord.dependabot.Github") as mock_github_class:
+        mock_gh = MagicMock()
+        mock_github_class.return_value = mock_gh
+        mock_user = MagicMock()
+        mock_user.login = "testuser"
+        mock_gh.get_user.return_value = mock_user
+
+        blocked = MagicMock()
+        blocked.owner.login = "testuser"
+        blocked.fork = False
+        blocked.full_name = "CodingZeal/hash_diff"
+        blocked.get_pulls.side_effect = token_policy
+
+        remaining = MagicMock()
+        remaining.owner.login = "testuser"
+        remaining.fork = False
+        remaining.full_name = "testuser/activemodel"
+        remaining_pulls = MagicMock()
+        remaining_pulls.totalCount = 0
+        remaining.get_pulls.return_value = remaining_pulls
+
+        mock_user.get_repos.return_value = [blocked, remaining]
+
+        result = merge_dependabot_prs("fake-token", dry_run=False, repo=None)
+
+    assert result.failed == 1
+    assert result.merged == 0
+    remaining.get_pulls.assert_called_once_with(state="open")
 
 
 def test_merge_dependabot_prs_single_repo():
