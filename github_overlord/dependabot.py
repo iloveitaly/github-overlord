@@ -14,7 +14,7 @@ from github.GithubObject import NotSet
 from github.PullRequest import PullRequest
 from pydantic import BaseModel
 
-from .utils import extract_repo_reference_from_github_url, log, log_token_policy_skip
+from .utils import extract_repo_reference_from_github_url, log
 
 AUTOMATIC_MERGE_MESSAGE = "Automatically merged with [github-overlord](https://github.com/iloveitaly/github-overlord)"
 
@@ -276,36 +276,26 @@ def process_repo(repo, dry_run: bool) -> RepoDependabotResult:
             log.debug("skipping forked repo")
             return RepoDependabotResult()
 
+        pulls = repo.get_pulls(state="open")
+
+        if pulls.totalCount == 0 or pulls == NoneType:
+            log.debug("no open prs, skipping")
+            return RepoDependabotResult()
+
         checked_count = 0
         merged_pr_count = 0
         failed_pr_count = 0
 
-        try:
-            pulls = repo.get_pulls(state="open")
+        for pr in pulls:
+            checked_count += 1
+            if is_eligible_for_merge(pr):
+                if merge_pr(pr, dry_run):
+                    merged_pr_count += 1
+                else:
+                    failed_pr_count += 1
+                continue
 
-            if pulls.totalCount == 0 or pulls == NoneType:
-                log.debug("no open prs, skipping")
-                return RepoDependabotResult()
-
-            for pr in pulls:
-                checked_count += 1
-                if is_eligible_for_merge(pr):
-                    if merge_pr(pr, dry_run):
-                        merged_pr_count += 1
-                    else:
-                        failed_pr_count += 1
-                    continue
-
-                log.debug("skipping PR", url=pr.html_url)
-        except GithubException as error:
-            if not log_token_policy_skip(error, repo=repo.full_name):
-                raise
-
-            return RepoDependabotResult(
-                checked=checked_count,
-                merged=merged_pr_count,
-                failed=failed_pr_count + 1,
-            )
+            log.debug("skipping PR", url=pr.html_url)
 
         if merged_pr_count == 0:
             log.debug("no PRs were merged")

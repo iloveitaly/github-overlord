@@ -5,11 +5,9 @@ from apscheduler.triggers.cron import CronTrigger
 from github.GithubException import GithubException
 
 from github_overlord import cli
-from github_overlord.utils import (
-    github_error_message,
-    is_fine_grained_token_lifetime_forbidden,
-    log,
-)
+from github_overlord.utils import log
+
+_TOKEN_LIFETIME_FORBIDDEN = "forbids access via a fine-grained personal access token"
 
 
 def handle_click_exit(func):
@@ -23,19 +21,35 @@ def handle_click_exit(func):
     return wrapper
 
 
+def _token_lifetime_forbidden_message(error: GithubException) -> str | None:
+    if error.status != 403:
+        return None
+
+    data = error.data
+    message = data.get("message") if isinstance(data, dict) else error.message
+    if not isinstance(message, str):
+        return None
+
+    if _TOKEN_LIFETIME_FORBIDDEN not in message.lower():
+        return None
+
+    return message
+
+
 def job():
     for command in list(cli.commands.values()):
         log.info("running command", command=command.name)
         try:
             handle_click_exit(command)()
         except GithubException as error:
-            if not is_fine_grained_token_lifetime_forbidden(error):
+            message = _token_lifetime_forbidden_message(error)
+            if message is None:
                 raise
 
             log.error(
                 "command stopped by github token policy, continuing",
                 command=command.name,
-                error=github_error_message(error),
+                error=message,
                 status=error.status,
             )
 
