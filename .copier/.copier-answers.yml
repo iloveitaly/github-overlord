@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: HEAD
+_commit: 332bda22e960a41f956a61f936135c877f4d58fb
 _src_path: https://github.com/iloveitaly/python-package-template
 add_llm_rules: true
 build_workflow: release_please
