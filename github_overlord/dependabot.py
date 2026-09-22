@@ -14,7 +14,7 @@ from github.GithubObject import NotSet
 from github.PullRequest import PullRequest
 from pydantic import BaseModel
 
-from .utils import extract_repo_reference_from_github_url, log
+from .utils import extract_repo_reference_from_github_url, log, skip_github_error
 
 AUTOMATIC_MERGE_MESSAGE = "Automatically merged with [github-overlord](https://github.com/iloveitaly/github-overlord)"
 
@@ -267,6 +267,10 @@ class RepoDependabotResult(BaseModel):
     failed: int = 0
 
 
+@skip_github_error(
+    "skipping repository after github error",
+    default=RepoDependabotResult(failed=1),
+)
 def process_repo(repo, dry_run: bool) -> RepoDependabotResult:
     # log.context is dynamic attribute monkey patched in utils.py
     with log.context(repo=repo.full_name):  # type: ignore

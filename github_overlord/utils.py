@@ -5,10 +5,12 @@ This file should be imported first in any application entrypoint.
 import logging
 import re
 import typing as t
+from functools import wraps
 from pathlib import Path
 
 import structlog
 from decouple import config
+from github.GithubException import GithubException
 
 root: Path
 
@@ -81,6 +83,29 @@ def extract_repo_reference_from_github_url(url: str | None) -> str | None:
         return url
 
     return f"{match.group(1)}/{match.group(2)}"
+
+
+def skip_github_error(message: str | None = None, *, default=None):
+    """Log a GithubException and return `default` so a repo loop can continue."""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except GithubException as error:
+                repo = getattr(args[0], "full_name", None) if args else None
+                log.error(
+                    message or "github error",
+                    status=error.status,
+                    error=str(error),
+                    repo=repo,
+                )
+                return default
+
+        return wrapper
+
+    return decorator
 
 
 # side effects are bad, but it's fun to do bad things
