@@ -5,8 +5,15 @@ description = "Automatically merge Dependabot PRs in public repositories"
 authors = [{ name = "Michael Bianco", email = "mike@mikebian.co" }]
 readme = "README.md"
 keywords = ["github", "dependabot", "automation"]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
 dependencies = [
     "pygithub>=2.4.0",
     "click>=8.1.7",
@@ -42,7 +49,7 @@ dev = [
     "coverage>=7.13.4",
     "pytest-cov>=7.0.0",
     "covdefaults>=2.3.0",
-    "beautiful-traceback>=0.2.0",
+    "beautiful-traceback>=1.0.2",
     "djlint>=1.36.4",
 ]
 
