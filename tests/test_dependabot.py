@@ -9,6 +9,7 @@ from github_overlord.dependabot import (
     merge_dependabot_prs,
     process_repo,
 )
+from github_overlord.utils import skip_github_error
 
 
 def test_repo_dependabot_result_defaults():
@@ -93,6 +94,25 @@ def test_process_repo_handles_merge_failure():
         assert result.checked == 1
         assert result.merged == 0
         assert result.failed == 1
+
+
+def test_skip_github_error_logs_optional_message_and_returns_default():
+    @skip_github_error("skipping after github error", default="skipped")
+    def boom(repo):
+        raise GithubException(403, {"message": "Forbidden"})
+
+    repo = MagicMock()
+    repo.full_name = "CodingZeal/hash_diff"
+
+    assert boom(repo) == "skipped"
+
+
+def test_skip_github_error_uses_default_log_message():
+    @skip_github_error(default=None)
+    def boom():
+        raise GithubException(500, {"message": "Server Error"})
+
+    assert boom() is None
 
 
 def test_merge_dependabot_prs_skips_github_error_and_continues():
