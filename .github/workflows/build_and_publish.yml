@@ -18,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # full history so `gitleaks git` in `just lint` can scan every commit
+          fetch-depth: 0
       - uses: jdx/mise-action@v4
         env:
           MISE_ENV: ci
@@ -70,10 +73,13 @@ jobs:
     needs: [release-please]
     if: needs.release-please.outputs.release_created
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Check out branch instead of detached HEAD so bare git push works
+          ref: ${{ github.ref_name }}
       - uses: jdx/mise-action@v4
         with:
           bootstrap: true
@@ -81,6 +87,12 @@ jobs:
       - uses: iloveitaly/github-action-direnv-load-and-mask@master
       - run: uv build
       - run: uv publish --token ${{ secrets.PYPI_API_TOKEN }}
+
+      # Keep uv.lock in sync with pyproject.toml after release version bump without requiring extra config files
+      - name: Sync uv.lock
+        run: |
+          uv lock
+          git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" commit -am "chore(deps): update uv.lock [skip ci]" && git push || true
 
       - name: Login to GHCR
         uses: docker/login-action@v4
