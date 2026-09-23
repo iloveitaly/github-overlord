@@ -7,6 +7,13 @@
 
 
 
+## [0.9.1](https://github.com/iloveitaly/github-overlord/compare/v0.9.0...v0.9.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* specify answers file path in template update task ([3c9eebb](https://github.com/iloveitaly/github-overlord/commit/3c9eebb2c2fc61b2a41ecaca50c1547ada28c2c9))
+
 ## [0.9.0](https://github.com/iloveitaly/github-overlord/compare/v0.8.0...v0.9.0) (2026-09-22)
 
 
