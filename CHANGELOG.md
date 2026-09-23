@@ -7,6 +7,13 @@
 
 
 
+## [0.9.2](https://github.com/iloveitaly/github-overlord/compare/v0.9.1...v0.9.2) (2026-09-23)
+
+
+### Bug Fixes
+
+* **deps:** add pyyaml runtime dependency ([a46fa1c](https://github.com/iloveitaly/github-overlord/commit/a46fa1c2840de90cd80b6968a6f2cf76442d66e1))
+
 ## [0.9.1](https://github.com/iloveitaly/github-overlord/compare/v0.9.0...v0.9.1) (2026-09-23)
 
 

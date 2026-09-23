@@ -1,6 +1,6 @@
 [project]
 name = "github-overlord"
-version = "0.9.1"
+version = "0.9.2"
 description = "Automatically merge Dependabot PRs in public repositories"
 authors = [{ name = "Michael Bianco", email = "mike@mikebian.co" }]
 readme = "README.md"
