@@ -24,6 +24,7 @@ dependencies = [
     "openai>=1.52.2,<4.0.0",
     "pydantic-ai-slim[google]>=0.0.18",
     "jinja2>=3.1.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.urls]

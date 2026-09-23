@@ -608,6 +608,7 @@ dependencies = [
     { name = "pydantic-ai-slim", extra = ["google"] },
     { name = "pygithub" },
     { name = "python-decouple-typed" },
+    { name = "pyyaml" },
     { name = "structlog" },
 ]
 
@@ -633,6 +634,7 @@ requires-dist = [
     { name = "pydantic-ai-slim", extras = ["google"], specifier = ">=0.0.18" },
     { name = "pygithub", specifier = ">=2.4.0" },
     { name = "python-decouple-typed", specifier = ">=3.11.0" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "structlog", specifier = ">=24.4,<27.0" },
 ]
 
