@@ -6,6 +6,9 @@ services:
       - GITHUB_TOKEN=
       # optional: minimum time between releases per repo (default: 2w)
       # - RELEASE_CHECKER_MIN_GAP=2w
+      # optional: minimum time between auto-generated releases across repos
+      # (default: 1w, set to 0 to disable)
+      # - RELEASE_CHECKER_GLOBAL_MIN_GAP=1w
       # the container will *not* assume the TZ of the host without this
       # make sure your host has this set as well!
       - TZ=${TZ}

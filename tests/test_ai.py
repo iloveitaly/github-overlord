@@ -293,3 +293,7 @@ def test_should_create_release():
         assert decision.suggested_version == "v1.0.0"
         assert "## Features" in decision.release_notes
         assert "**Full Changelog**" in decision.release_notes
+        assert (
+            "**Generated-by**: https://github.com/iloveitaly/github-overlord"
+            in decision.release_notes
+        )

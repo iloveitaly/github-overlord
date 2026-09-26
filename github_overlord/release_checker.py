@@ -7,6 +7,8 @@ calculates semantic version bumps, and generates formatted release notes.
 
 import os
 import re
+from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from github import GithubException
@@ -20,6 +22,9 @@ from github_overlord.ai import (
 )
 from github_overlord.config import JINJA_ENV
 from github_overlord.utils import log
+
+# Release notes include this line. It is how a later run recognizes its own releases.
+GENERATED_BY_MARKER = "**Generated-by**: https://github.com/iloveitaly/github-overlord"
 
 
 def _parse_duration_to_timedelta(value: str) -> timedelta:
@@ -56,27 +61,166 @@ def _parse_duration_to_timedelta(value: str) -> timedelta:
     raise ValueError(f"unsupported duration unit: {unit!r}")
 
 
-def _get_min_release_gap() -> timedelta:
-    raw = os.getenv("RELEASE_CHECKER_MIN_GAP", "2w")
+def _get_configured_gap(
+    env_var: str,
+    default: str,
+    *,
+    invalid_event: str,
+    negative_event: str,
+) -> timedelta:
+    raw = os.getenv(env_var, default)
     try:
         gap = _parse_duration_to_timedelta(raw)
     except ValueError:
-        log.warning(
-            "invalid release_checker_min_gap; falling back to default",
-            value=raw,
-            default="2w",
-        )
-        gap = timedelta(weeks=2)
+        log.warning(invalid_event, value=raw, default=default)
+        gap = _parse_duration_to_timedelta(default)
 
     if gap.total_seconds() < 0:
-        log.warning(
-            "negative release_checker_min_gap; falling back to default",
-            value=raw,
-            default="2w",
-        )
-        return timedelta(weeks=2)
+        log.warning(negative_event, value=raw, default=default)
+        return _parse_duration_to_timedelta(default)
 
     return gap
+
+
+def _get_min_release_gap() -> timedelta:
+    return _get_configured_gap(
+        "RELEASE_CHECKER_MIN_GAP",
+        "2w",
+        invalid_event="invalid release_checker_min_gap; falling back to default",
+        negative_event="negative release_checker_min_gap; falling back to default",
+    )
+
+
+def get_global_min_release_gap() -> timedelta:
+    """Minimum time between auto-generated releases across the selected repos.
+
+    Defaults to one week. ``0`` disables the limit.
+    """
+
+    return _get_configured_gap(
+        "RELEASE_CHECKER_GLOBAL_MIN_GAP",
+        "1w",
+        invalid_event="invalid release_checker_global_min_gap; falling back to default",
+        negative_event="negative release_checker_global_min_gap; falling back to default",
+    )
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _is_generated_release(release: object) -> bool:
+    body = getattr(release, "body", None) or ""
+    if not isinstance(body, str):
+        return False
+    return GENERATED_BY_MARKER in body
+
+
+def _published_at(release: object) -> datetime | None:
+    published = getattr(release, "published_at", None)
+    if not isinstance(published, datetime):
+        return None
+    return _as_utc(published)
+
+
+@dataclass(frozen=True)
+class GeneratedRelease:
+    """An auto-generated GitHub release, identified by its release notes."""
+
+    repo_full_name: str
+    tag_name: str
+    published_at: datetime
+
+
+def latest_generated_release_since(
+    repos: Iterable[Repository], since: datetime
+) -> GeneratedRelease | None:
+    """Return the newest auto-generated release published after ``since``.
+
+    GitHub lists releases by ``created_at``, and that field is the tagged
+    commit's timestamp, not when the release was published. A release published
+    today for an older commit can sort behind a newer commit, so this compares
+    ``published_at`` across the full list. Manual releases are ignored.
+    """
+
+    since = _as_utc(since)
+    latest: GeneratedRelease | None = None
+
+    for repo in repos:
+        try:
+            for release in repo.get_releases():
+                published_at = _published_at(release)
+                if published_at is None or published_at <= since:
+                    continue
+                if latest is not None and published_at <= latest.published_at:
+                    continue
+                if not _is_generated_release(release):
+                    continue
+                latest = GeneratedRelease(
+                    repo_full_name=repo.full_name,
+                    tag_name=release.tag_name,
+                    published_at=published_at,
+                )
+        except GithubException as error:
+            log.error(
+                "failed to list releases while checking global gap",
+                repo=getattr(repo, "full_name", None),
+                error=str(error),
+            )
+            raise
+
+    return latest
+
+
+def release_creation_blocked_by_global_gap(
+    repos: Iterable[Repository],
+    *,
+    now: datetime | None = None,
+    gap: timedelta | None = None,
+) -> bool:
+    """Return whether an auto-generated release is still inside the global gap.
+
+    A gap of zero disables the check. The clock is the newest published
+    auto-generated release among ``repos``.
+    """
+
+    gap = get_global_min_release_gap() if gap is None else gap
+    if gap.total_seconds() <= 0:
+        return False
+
+    now = _as_utc(now or datetime.now(UTC))
+    latest = latest_generated_release_since(repos, now - gap)
+    if latest is None:
+        return False
+
+    time_since = now - latest.published_at
+    log.info(
+        "skipping release check due to global minimum gap",
+        last_release=latest.tag_name,
+        last_release_repo=latest.repo_full_name,
+        time_since_release_seconds=int(time_since.total_seconds()),
+        min_gap_seconds=int(gap.total_seconds()),
+    )
+    return True
+
+
+def should_stop_for_global_gap(
+    gap: timedelta, max_releases: int, created_count: int
+) -> bool:
+    """Return whether this run should stop after creating an auto-generated release.
+
+    A positive global gap allows one new auto-generated release per interval.
+    ``max_releases`` still caps a run on its own when the global gap is disabled.
+    """
+
+    if gap.total_seconds() <= 0 or created_count < 1:
+        return False
+    # max_releases <= 0 means unlimited for the run; the global gap is the cap.
+    if max_releases <= 0:
+        return True
+    return created_count < max_releases
 
 
 class ReleaseAnalysis(BaseModel):
@@ -339,9 +483,7 @@ def generate_release_notes(
         changelog_url = f"https://github.com/{repo.full_name}/commits/{new_tag}"
 
     notes_parts.append(f"**Full Changelog**: {changelog_url}")
-    notes_parts.append(
-        "**Generated-by**: https://github.com/iloveitaly/github-overlord"
-    )
+    notes_parts.append(GENERATED_BY_MARKER)
 
     return "\n".join(notes_parts)
 
@@ -380,6 +522,9 @@ def create_release(repo: Repository, tag: str, notes: str, dry_run: bool) -> boo
 def check_repo_for_release(repo: Repository, dry_run: bool) -> dict:
     """
     Check a single repository and create a release if recommended.
+
+    The cross-repo ``RELEASE_CHECKER_GLOBAL_MIN_GAP`` is enforced by the
+    generate-releases command before this function is called.
 
     Returns:
         dict with keys: checked, skipped, created, failed

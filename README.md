@@ -65,13 +65,15 @@ github-overlord generate-releases --topic auto-release --dry-run
 * `--topic` flag or `RELEASE_CHECKER_TOPIC` - Topic to filter repositories (required unless using `--repo`)
 * `--repo` flag or `RELEASE_CHECKER_REPO` - Single repository to process (useful for testing)
 * `RELEASE_CHECKER_MIN_GAP` - Minimum time between releases for the same repo (defaults to `2w`, e.g. `14d`, `48h`)
+* `RELEASE_CHECKER_GLOBAL_MIN_GAP` - Minimum time between releases created by this tool across the repositories in that run (defaults to `1w`; set to `0` to disable). The clock is the newest GitHub release, among those repos, whose notes include this tool's `Generated-by` line, using that release's publish time. Manual releases do not reset it. While this gap is active, a run creates at most one release even if `--max-releases` is higher.
 
 **How it works:**
 
 1. Finds repositories matching the specified topic
-2. For each repo, gets commits since the last release (or since repo creation if no releases)
-3. Analyzes up to the last 50 commits using the configured AI model (defaulting to `gemini-3.8-flash`) to determine if a release is warranted
-4. If the LLM recommends a release, automatically creates one with:
+2. Finds the newest release published by this tool across those repositories. If that publish time is newer than `RELEASE_CHECKER_GLOBAL_MIN_GAP`, the run stops
+3. For each remaining repo, skips it when its latest release is newer than `RELEASE_CHECKER_MIN_GAP`, then reads commits since that release (or since the repo was created)
+4. Analyzes up to the last 50 commits using the configured AI model (defaulting to `gemini-3.8-flash`) to determine if a release is warranted
+5. If the LLM recommends a release, automatically creates one with:
 
     * Auto-incremented semantic version (patch/minor/major based on changes)
     * AI-generated release notes highlighting key changes
