@@ -2,6 +2,9 @@
 set shell := ["zsh", "-euo", "pipefail", "-c"]
 set script-interpreter := ["zsh", "-euo", "pipefail"]
 
+# Ensure gh commands never trigger an interactive pager
+export GH_PAGER := "cat"
+
 # Set up the Python environment, done automatically for you when using direnv
 setup:
     [ -f .env ] || cp .env-example .env
@@ -167,8 +170,7 @@ github_last_build_failure:
     if [[ "$CONCLUSION" == "success" ]]; then
         echo "latest build succeeded"
     else
-        # Force cat pager to output logs directly to terminal
-        GH_PAGER=cat gh run view "$ID" --log-failed
+        gh run view "$ID" --log-failed
     fi
 
 # Rerun only failed jobs for the last failed 'build' workflow for the current branch
