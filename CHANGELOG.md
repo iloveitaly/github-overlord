@@ -7,6 +7,13 @@
 
 
 
+## [0.10.0](https://github.com/iloveitaly/github-overlord/compare/v0.9.2...v0.10.0) (2026-09-26)
+
+
+### Features
+
+* **release-checker:** add global min gap between automated releases ([a351aa4](https://github.com/iloveitaly/github-overlord/commit/a351aa4ae2cc6dab91c884f4efd69a02a5ad2ef8))
+
 ## [0.9.2](https://github.com/iloveitaly/github-overlord/compare/v0.9.1...v0.9.2) (2026-09-23)
 
 
