@@ -210,8 +210,8 @@ def handle_stale_dependabot_pr(pr: PullRequest) -> None:
     Handle a dependabot PR that has been open for at least 30 days and has conflicts
     """
 
-    assert not pr.mergeable
-    assert pr.mergeable_state == "dirty"
+    if not pr.user or pr.user.login != "dependabot[bot]":
+        return
 
     if pr.body is None:
         return
@@ -221,23 +221,31 @@ def handle_stale_dependabot_pr(pr: PullRequest) -> None:
             "PR has disabled automatic rebases, manually commenting", url=pr.html_url
         )
 
-        pr.create_issue_comment("@dependabot rebase")
+        try:
+            pr.create_issue_comment("@dependabot rebase")
+        except GithubException as error:
+            log.error(
+                "failed to comment on stale PR",
+                pr=pr.html_url,
+                status=error.status,
+                error=error.data.get("message", str(error)),
+            )
 
 
 def is_eligible_for_merge(pr: PullRequest) -> bool:
-    resolve_async_status(pr, "mergeable")
-
     if pr.state == "closed":
         log.debug("PR is closed", url=pr.html_url)
         return False
 
+    if not pr.user or pr.user.login != "dependabot[bot]":
+        log.debug("PR is not from dependabot", url=pr.html_url)
+        return False
+
+    resolve_async_status(pr, "mergeable")
+
     if not pr.mergeable:
         log.debug("PR is not mergeable", url=pr.html_url)
         handle_stale_dependabot_pr(pr)
-        return False
-
-    if pr.user.login != "dependabot[bot]":
-        log.debug("PR is not from dependabot", url=pr.html_url)
         return False
 
     last_commit = pr.get_commits().reversed[0]

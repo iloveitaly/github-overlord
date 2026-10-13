@@ -6,6 +6,8 @@ from github.GithubException import GithubException
 
 from github_overlord.dependabot import (
     RepoDependabotResult,
+    handle_stale_dependabot_pr,
+    is_eligible_for_merge,
     merge_dependabot_prs,
     process_repo,
 )
@@ -190,3 +192,75 @@ def test_merge_dependabot_prs_all_repos_dry_run():
             assert result.checked == 5
             assert result.merged == 3
             assert result.failed == 0
+
+
+def test_handle_stale_dependabot_pr_with_non_dirty_mergeable_state():
+    pr = MagicMock()
+    pr.user.login = "dependabot[bot]"
+    pr.mergeable = False
+    pr.mergeable_state = "unknown"
+    pr.body = "Automatic rebases have been disabled on this pull request"
+
+    handle_stale_dependabot_pr(pr)
+
+    pr.create_issue_comment.assert_called_once_with("@dependabot rebase")
+
+
+def test_handle_stale_dependabot_pr_ignores_non_dependabot_user():
+    pr = MagicMock()
+    pr.user.login = "some-human"
+    pr.mergeable = False
+    pr.mergeable_state = "dirty"
+    pr.body = "Automatic rebases have been disabled on this pull request"
+
+    handle_stale_dependabot_pr(pr)
+
+    pr.create_issue_comment.assert_not_called()
+
+
+def test_handle_stale_dependabot_pr_ignores_pr_without_rebase_disabled_message():
+    pr = MagicMock()
+    pr.user.login = "dependabot[bot]"
+    pr.mergeable = False
+    pr.mergeable_state = "dirty"
+    pr.body = "Bumps foo from 1.0 to 1.1"
+
+    handle_stale_dependabot_pr(pr)
+
+    pr.create_issue_comment.assert_not_called()
+
+
+def test_handle_stale_dependabot_pr_catches_comment_github_exception():
+    pr = MagicMock()
+    pr.user.login = "dependabot[bot]"
+    pr.mergeable = False
+    pr.mergeable_state = "dirty"
+    pr.body = "Automatic rebases have been disabled on this pull request"
+    pr.create_issue_comment.side_effect = GithubException(403, {"message": "Forbidden"})
+
+    handle_stale_dependabot_pr(pr)
+
+
+def test_is_eligible_for_merge_skips_non_dependabot():
+    pr = MagicMock()
+    pr.state = "open"
+    pr.user.login = "otheruser"
+
+    with patch("github_overlord.dependabot.resolve_async_status") as mock_resolve:
+        assert is_eligible_for_merge(pr) is False
+        mock_resolve.assert_not_called()
+
+
+def test_is_eligible_for_merge_handles_stale_pr_with_unknown_state():
+    pr = MagicMock()
+    pr.state = "open"
+    pr.user.login = "dependabot[bot]"
+    pr.mergeable = False
+    pr.mergeable_state = "blocked"
+    pr.body = "Automatic rebases have been disabled on this pull request"
+
+    with patch("github_overlord.dependabot.resolve_async_status"):
+        assert is_eligible_for_merge(pr) is False
+
+    pr.create_issue_comment.assert_called_once_with("@dependabot rebase")
+
