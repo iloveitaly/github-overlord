@@ -7,6 +7,13 @@
 
 
 
+## [0.10.1](https://github.com/iloveitaly/github-overlord/compare/v0.10.0...v0.10.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **dependabot:** improve stale PR handling and checks ([d4d7599](https://github.com/iloveitaly/github-overlord/commit/d4d75999b35eda6786a92f96dbf8a8a9d4a16197))
+
 ## [0.10.0](https://github.com/iloveitaly/github-overlord/compare/v0.9.2...v0.10.0) (2026-09-26)
 
 
