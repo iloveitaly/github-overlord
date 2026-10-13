@@ -263,4 +263,3 @@ def test_is_eligible_for_merge_handles_stale_pr_with_unknown_state():
         assert is_eligible_for_merge(pr) is False
 
     pr.create_issue_comment.assert_called_once_with("@dependabot rebase")
-
