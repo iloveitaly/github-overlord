@@ -597,7 +597,7 @@ wheels = [
 
 [[package]]
 name = "github-overlord"
-version = "0.10.1"
+version = "0.10.2"
 source = { editable = "." }
 dependencies = [
     { name = "apscheduler" },
