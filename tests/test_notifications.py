@@ -615,6 +615,3 @@ def test_clean_notifications_marks_owner_release_when_permissions_none() -> None
         clean_notifications(token="dummy-token", dry_run=False)
 
     mock_mark_done.assert_called_once_with(owned_notification)
-
-
-
