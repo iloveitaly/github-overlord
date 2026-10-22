@@ -109,12 +109,50 @@ def test_skip_github_error_logs_optional_message_and_returns_default():
     assert boom(repo) == "skipped"
 
 
-def test_skip_github_error_uses_default_log_message():
-    @skip_github_error(default=None)
+def test_skip_github_error_uses_default_fallback_and_log_message():
+    @skip_github_error()
     def boom():
         raise GithubException(500, {"message": "Server Error"})
 
-    assert boom() is None
+    assert boom() is False
+
+
+def test_skip_github_error_extracts_repo_from_notification():
+    @skip_github_error("notification error", default=False)
+    def boom(notification):
+        raise GithubException(403, {"message": "Forbidden"})
+
+    notification = MagicMock()
+    notification.repository.full_name = "railwayapp/railpack"
+    del notification.full_name  # Ensure it doesn't match hasattr(first, 'full_name')
+
+    with patch("github_overlord.utils.log.error") as mock_log:
+        result = boom(notification)
+
+    assert result is False
+    mock_log.assert_called_once_with(
+        "notification error",
+        status=403,
+        error='403 {"message": "Forbidden"}',
+        repo="railwayapp/railpack",
+    )
+
+
+def test_skip_github_error_extracts_repo_from_kwargs():
+    @skip_github_error("kwarg error", default="fallback")
+    def boom(*, repo):
+        raise GithubException(404, {"message": "Not Found"})
+
+    with patch("github_overlord.utils.log.error") as mock_log:
+        result = boom(repo="myuser/project")
+
+    assert result == "fallback"
+    mock_log.assert_called_once_with(
+        "kwarg error",
+        status=404,
+        error='404 {"message": "Not Found"}',
+        repo="myuser/project",
+    )
 
 
 def test_merge_dependabot_prs_skips_github_error_and_continues():

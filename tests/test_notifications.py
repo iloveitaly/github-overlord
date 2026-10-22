@@ -1,9 +1,11 @@
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
+from github.GithubException import GithubException
 from github.Notification import Notification
 
 from github_overlord.notifications import (
+    clean_notifications,
     is_notification_older_than,
     is_pull_request,
     is_pull_request_approved_by_user_and_merged,
@@ -463,3 +465,156 @@ def test_is_notification_older_than_custom_max_age() -> None:
         is_notification_older_than(notification, max_age=timedelta(days=14), now=now)
         is False
     )
+
+
+class _FakeRepo:
+    def __init__(
+        self,
+        full_name: str = "testuser/testrepo",
+        owner_login: str = "testuser",
+        permissions: object | None = None,
+        permissions_error: Exception | None = None,
+    ):
+        self.full_name = full_name
+        self.raw_data = {"full_name": full_name}
+        self.owner = MagicMock(login=owner_login)
+        self._permissions = permissions
+        self._permissions_error = permissions_error
+
+    @property
+    def permissions(self):
+        if self._permissions_error:
+            raise self._permissions_error
+        return self._permissions
+
+
+def _make_release_notification(
+    repo_full_name: str = "testuser/testrepo",
+    repo_owner_login: str = "testuser",
+    permissions_push: bool | None = None,
+    permissions_exception: Exception | None = None,
+    subject_type: str = "Release",
+    repository_none: bool = False,
+) -> Notification:
+    notification = MagicMock(spec=Notification)
+    subject = MagicMock()
+    subject.type = subject_type
+    notification.subject = subject
+
+    if repository_none:
+        notification.repository = None
+        return notification
+
+    perms = None
+    if permissions_push is not None:
+        perms = MagicMock()
+        perms.push = permissions_push
+
+    notification.repository = _FakeRepo(
+        full_name=repo_full_name,
+        owner_login=repo_owner_login,
+        permissions=perms,
+        permissions_error=permissions_exception,
+    )
+    return notification
+
+
+def test_clean_notifications_handles_github_exception_on_release() -> None:
+    forbidden_notification = _make_release_notification(
+        repo_full_name="railwayapp/railpack",
+        repo_owner_login="railwayapp",
+        permissions_exception=GithubException(
+            403,
+            "`railwayapp` forbids access via a personal access token (classic).",
+        ),
+    )
+    forbidden_notification.reason = "subscribed"
+    forbidden_notification.updated_at = datetime.now(UTC)
+
+    owned_notification = _make_release_notification(
+        repo_full_name="myuser/myproject",
+        repo_owner_login="myuser",
+        permissions_push=True,
+    )
+    owned_notification.reason = "subscribed"
+    owned_notification.updated_at = datetime.now(UTC)
+
+    mock_user = MagicMock()
+    mock_user.login = "myuser"
+    mock_user.get_notifications.return_value = [
+        forbidden_notification,
+        owned_notification,
+    ]
+
+    with (
+        patch("github_overlord.notifications.Github") as mock_github_class,
+        patch("github_overlord.notifications.log.error") as mock_log_error,
+        patch.object(Notification, "mark_as_done") as mock_mark_done,
+    ):
+        mock_github = MagicMock()
+        mock_github.get_user.return_value = mock_user
+        mock_github_class.return_value = mock_github
+
+        clean_notifications(token="dummy-token", dry_run=False)
+
+    mock_log_error.assert_called_once()
+    assert mock_log_error.call_args[1]["repo"] == "railwayapp/railpack"
+
+    mock_mark_done.assert_called_once_with(owned_notification)
+
+
+def test_clean_notifications_skips_uncontrolled_release() -> None:
+    uncontrolled_notification = _make_release_notification(
+        repo_full_name="otherorg/otherrepo",
+        repo_owner_login="otherorg",
+        permissions_push=False,
+    )
+    uncontrolled_notification.reason = "subscribed"
+    uncontrolled_notification.updated_at = datetime.now(UTC)
+
+    mock_user = MagicMock()
+    mock_user.login = "myuser"
+    mock_user.get_notifications.return_value = [uncontrolled_notification]
+
+    with (
+        patch("github_overlord.notifications.Github") as mock_github_class,
+        patch("github_overlord.notifications.log.error") as mock_log_error,
+        patch.object(Notification, "mark_as_done") as mock_mark_done,
+    ):
+        mock_github = MagicMock()
+        mock_github.get_user.return_value = mock_user
+        mock_github_class.return_value = mock_github
+
+        clean_notifications(token="dummy-token", dry_run=False)
+
+    mock_log_error.assert_not_called()
+    mock_mark_done.assert_not_called()
+
+
+def test_clean_notifications_marks_owner_release_when_permissions_none() -> None:
+    owned_notification = _make_release_notification(
+        repo_full_name="myuser/myproject",
+        repo_owner_login="myuser",
+        permissions_push=None,
+    )
+    owned_notification.reason = "subscribed"
+    owned_notification.updated_at = datetime.now(UTC)
+
+    mock_user = MagicMock()
+    mock_user.login = "myuser"
+    mock_user.get_notifications.return_value = [owned_notification]
+
+    with (
+        patch("github_overlord.notifications.Github") as mock_github_class,
+        patch.object(Notification, "mark_as_done") as mock_mark_done,
+    ):
+        mock_github = MagicMock()
+        mock_github.get_user.return_value = mock_user
+        mock_github_class.return_value = mock_github
+
+        clean_notifications(token="dummy-token", dry_run=False)
+
+    mock_mark_done.assert_called_once_with(owned_notification)
+
+
+

@@ -10,7 +10,7 @@ from github.Notification import Notification
 
 import github_overlord.patch  # noqa: F401
 
-from .utils import log
+from .utils import log, skip_github_error
 
 
 def is_pull_request(notification: Notification) -> bool:
@@ -176,6 +176,7 @@ def clean_notifications(
 
     log.info("marked old notifications (>2mo) as done", count=len(old_notifications))
 
+    @skip_github_error("failed to check repository permissions")
     def is_release_on_controlled_repo(notification: Notification) -> bool:
         if notification.subject.type != "Release":
             return False

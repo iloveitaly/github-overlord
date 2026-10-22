@@ -2,6 +2,7 @@
 This file should be imported first in any application entrypoint.
 """
 
+import contextlib
 import logging
 import re
 import typing as t
@@ -85,7 +86,35 @@ def extract_repo_reference_from_github_url(url: str | None) -> str | None:
     return f"{match.group(1)}/{match.group(2)}"
 
 
-def skip_github_error(message: str | None = None, *, default=None):
+def _extract_repo_name(*args, **kwargs) -> str | None:
+    if args:
+        first = args[0]
+        with contextlib.suppress(AttributeError, TypeError, GithubException):
+            if hasattr(first, "full_name"):
+                return getattr(first, "full_name", None)
+            if hasattr(first, "repository"):
+                repo_obj = getattr(first, "repository", None)
+                if repo_obj is not None:
+                    repo_name = getattr(repo_obj, "full_name", None)
+                    if (
+                        repo_name is None
+                        and hasattr(repo_obj, "raw_data")
+                        and isinstance(repo_obj.raw_data, dict)
+                    ):
+                        repo_name = repo_obj.raw_data.get("full_name")
+                    return repo_name
+
+    if "repo" in kwargs:
+        repo_arg = kwargs["repo"]
+        with contextlib.suppress(AttributeError, TypeError, GithubException):
+            if isinstance(repo_arg, str):
+                return repo_arg
+            return getattr(repo_arg, "full_name", None)
+
+    return None
+
+
+def skip_github_error(message: str | None = None, *, default: t.Any = False):
     """Log a GithubException and return `default` so a repo loop can continue."""
 
     def decorator(func):
@@ -94,7 +123,7 @@ def skip_github_error(message: str | None = None, *, default=None):
             try:
                 return func(*args, **kwargs)
             except GithubException as error:
-                repo = getattr(args[0], "full_name", None) if args else None
+                repo = _extract_repo_name(*args, **kwargs)
                 log.error(
                     message or "github error",
                     status=error.status,
