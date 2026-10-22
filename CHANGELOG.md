@@ -7,6 +7,13 @@
 
 
 
+## [0.10.2](https://github.com/iloveitaly/github-overlord/compare/v0.10.1...v0.10.2) (2026-10-22)
+
+
+### Bug Fixes
+
+* handle github errors when checking release notification permissions ([52fcfaa](https://github.com/iloveitaly/github-overlord/commit/52fcfaa7bb47cd5eafd59fbb0a39ce4701ec4216))
+
 ## [0.10.1](https://github.com/iloveitaly/github-overlord/compare/v0.10.0...v0.10.1) (2026-10-13)
 
 
