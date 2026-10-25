@@ -615,3 +615,112 @@ def test_clean_notifications_marks_owner_release_when_permissions_none() -> None
         clean_notifications(token="dummy-token", dry_run=False)
 
     mock_mark_done.assert_called_once_with(owned_notification)
+
+
+def test_clean_notifications_handles_github_exception_on_pull_request() -> None:
+    forbidden_notification = _make_notification(
+        reason="subscribed",
+        subject_type="PullRequest",
+    )
+    forbidden_notification.repository = _FakeRepo(
+        full_name="railwayapp/railpack",
+        owner_login="railwayapp",
+    )
+    forbidden_notification.get_pull_request.side_effect = GithubException(
+        403,
+        "`railwayapp` forbids access via a personal access token (classic).",
+    )
+    forbidden_notification.updated_at = datetime.now(UTC)
+
+    owned_bot_notification = _make_notification(
+        reason="subscribed",
+        subject_type="PullRequest",
+    )
+    owned_bot_notification.repository = _FakeRepo(
+        full_name="myuser/myproject",
+        owner_login="myuser",
+    )
+    bot_pr = MagicMock()
+    bot_pr.user.type = "Bot"
+    bot_pr.user.login = "renovate[bot]"
+    bot_pr.body = "chore: dependencies"
+    bot_pr.head.ref = "renovate/foo"
+    owned_bot_notification.get_pull_request.return_value = bot_pr
+    owned_bot_notification.updated_at = datetime.now(UTC)
+
+    mock_user = MagicMock()
+    mock_user.login = "myuser"
+    mock_user.get_notifications.return_value = [
+        forbidden_notification,
+        owned_bot_notification,
+    ]
+
+    with (
+        patch("github_overlord.notifications.Github") as mock_github_class,
+        patch("github_overlord.notifications.log.error") as mock_log_error,
+        patch.object(Notification, "mark_as_done") as mock_mark_done,
+    ):
+        mock_github = MagicMock()
+        mock_github.get_user.return_value = mock_user
+        mock_github_class.return_value = mock_github
+
+        clean_notifications(token="dummy-token", dry_run=False)
+
+    assert mock_log_error.called
+    assert mock_log_error.call_args[1]["repo"] == "railwayapp/railpack"
+    mock_mark_done.assert_called_once_with(owned_bot_notification)
+
+
+def test_clean_notifications_handles_github_exception_on_author_pull_request() -> None:
+    forbidden_notification = _make_notification(
+        reason="author",
+        subject_type="PullRequest",
+    )
+    forbidden_notification.repository = _FakeRepo(
+        full_name="railwayapp/railpack",
+        owner_login="railwayapp",
+    )
+    forbidden_notification.get_pull_request.side_effect = GithubException(
+        403,
+        "`railwayapp` forbids access via a personal access token (classic).",
+    )
+    forbidden_notification.updated_at = datetime.now(UTC)
+
+    mock_user = MagicMock()
+    mock_user.login = "myuser"
+    mock_user.get_notifications.return_value = [forbidden_notification]
+
+    with (
+        patch("github_overlord.notifications.Github") as mock_github_class,
+        patch("github_overlord.notifications.log.error") as mock_log_error,
+        patch.object(Notification, "mark_as_done") as mock_mark_done,
+    ):
+        mock_github = MagicMock()
+        mock_github.get_user.return_value = mock_user
+        mock_github_class.return_value = mock_github
+
+        clean_notifications(token="dummy-token", dry_run=False)
+
+    assert mock_log_error.called
+    assert mock_log_error.call_args[1]["repo"] == "railwayapp/railpack"
+    mock_mark_done.assert_not_called()
+
+
+def test_pr_predicates_handle_github_exception() -> None:
+    notification = _make_notification(
+        reason="author",
+        subject_type="PullRequest",
+    )
+    notification.repository = _FakeRepo(
+        full_name="railwayapp/railpack",
+        owner_login="railwayapp",
+    )
+    notification.get_pull_request.side_effect = GithubException(
+        403,
+        "`railwayapp` forbids access via a personal access token (classic).",
+    )
+
+    assert is_self_authored_pr_without_activity(notification, "myuser") is False
+    assert is_pull_request_merged_by_user(notification, "myuser") is False
+    assert is_pull_request_approved_by_user_and_merged(notification, "myuser") is False
+    assert is_pull_request_closed_by_user(notification, "myuser") is False

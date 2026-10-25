@@ -18,6 +18,7 @@ def is_pull_request(notification: Notification) -> bool:
     return notification.subject.type == "PullRequest"
 
 
+@skip_github_error("failed to inspect self-authored PR", default=False)
 def is_self_authored_pr_without_activity(
     notification: Notification, login: str
 ) -> bool:
@@ -50,6 +51,7 @@ def is_self_authored_pr_without_activity(
     return not external_reviews
 
 
+@skip_github_error("failed to inspect user merged PR", default=False)
 def is_pull_request_merged_by_user(notification: Notification, login: str) -> bool:
     """Filter notifications for pull requests that were merged by the authenticated user.
 
@@ -65,6 +67,7 @@ def is_pull_request_merged_by_user(notification: Notification, login: str) -> bo
     return bool(pr.merged and pr.merged_by and pr.merged_by.login == login)
 
 
+@skip_github_error("failed to inspect user approved and merged PR", default=False)
 def is_pull_request_approved_by_user_and_merged(
     notification: Notification, login: str
 ) -> bool:
@@ -99,6 +102,7 @@ def is_pull_request_approved_by_user_and_merged(
     return (user_decision_reviews[-1].state or "").upper() == "APPROVED"
 
 
+@skip_github_error("failed to inspect user closed PR", default=False)
 def is_pull_request_closed_by_user(notification: Notification, login: str) -> bool:
     """Filter notifications for pull requests that were closed by the authenticated user.
 
@@ -201,12 +205,14 @@ def clean_notifications(
 
     log.info("marked releases as done", count=len(released_on_controlled_repos))
 
+    @skip_github_error("failed to inspect bot authored PR", default=False)
     def is_bot_authored_pull_request(notification: Notification) -> bool:
         pull_request = notification.get_pull_request()
         author = pull_request.user
 
         return author.type == "Bot" or author.login.endswith("[bot]")
 
+    @skip_github_error("failed to inspect release-please PR", default=False)
     def is_release_please_pull_request(notification: Notification) -> bool:
         pull_request = notification.get_pull_request()
         body = pull_request.body or ""
@@ -216,6 +222,7 @@ def clean_notifications(
             or pull_request.head.ref.startswith("release-please--branches--")
         )
 
+    @skip_github_error("failed to inspect if PR is open", default=True)
     def is_pull_request_open(notification: Notification) -> bool:
         return notification.get_pull_request().state == "open"
 
@@ -284,10 +291,14 @@ def clean_notifications(
     # Case: Pull requests closed (unmerged) by the authenticated user
     # If the user closed the PR without merging, their action is completed.
     # Merged PRs are already handled by user_merged_pull_requests.
+    @skip_github_error("failed to inspect if PR is unmerged", default=False)
+    def is_pull_request_unmerged(notification: Notification) -> bool:
+        return not notification.get_pull_request().merged
+
     user_closed_pull_requests = (
         notifications_list
         | fp.filter(is_pull_request)
-        | fp.filter(lambda n: not n.get_pull_request().merged)
+        | fp.filter(is_pull_request_unmerged)
         | fp.filter(lambda n: is_pull_request_closed_by_user(n, login))
         | fp.lmap(mark_done)
     )
