@@ -7,6 +7,14 @@
 
 
 
+## [0.10.3](https://github.com/iloveitaly/github-overlord/compare/v0.10.2...v0.10.3) (2026-10-25)
+
+
+### Bug Fixes
+
+* handle github errors when inspecting pull request notifications ([0f51987](https://github.com/iloveitaly/github-overlord/commit/0f51987752f6a9f2e299fae78b029e577f02fc65))
+* **notifications:** handle github errors when inspecting pull requests ([0f51987](https://github.com/iloveitaly/github-overlord/commit/0f51987752f6a9f2e299fae78b029e577f02fc65))
+
 ## [0.10.2](https://github.com/iloveitaly/github-overlord/compare/v0.10.1...v0.10.2) (2026-10-22)
 
 
